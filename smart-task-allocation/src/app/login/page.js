@@ -2,7 +2,7 @@ import AuthForm from "@/components/AuthForm";
 
 export default function LoginPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#f4f7fb] px-6 py-12">
+    <main className="flex min-h-screen items-center justify-center bg-[#E0E5E9]">
       <AuthForm />
     </main>
   );
