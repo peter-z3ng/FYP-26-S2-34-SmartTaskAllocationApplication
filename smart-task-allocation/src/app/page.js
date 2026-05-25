@@ -104,14 +104,14 @@ export default function Home() {
             </a>
           </div>
 
-          {/* Dashboard Preview */}
+          {/* Home Preview */}
           <div className="mt-24 w-full max-w-5xl rounded-[36px] border border-white/20 bg-white/10 p-4 shadow-[0_40px_120px_rgba(13,30,76,0.45)] backdrop-blur-xl">
             <div className="rounded-[28px] border border-white/10 bg-[#0D1E4C]/40 p-8">
               <div className="mb-8 flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-white/60">Dashboard</p>
+                  <p className="text-xs text-white/60">Home</p>
                   <h2 className="text-2xl font-semibold">
-                    Today's Workforce Overview
+                    Today&apos;s Workforce Overview
                   </h2>
                 </div>
 

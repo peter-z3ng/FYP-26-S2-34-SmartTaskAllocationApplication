@@ -1,5 +1,5 @@
-import HomePanel from "@/components/HomePanel";
 import SideMenuLayout from "@/components/SideMenuLayout";
+import TeamManagement from "@/components/TeamManagement";
 
 export default function ManagerTeamPage() {
   return (
@@ -8,10 +8,7 @@ export default function ManagerTeamPage() {
       title="Team"
       subtitle="Understand team skills, availability, and workload."
     >
-      <HomePanel
-        title="Team View"
-        description="This page will show employees, skill coverage, and current workload."
-      />
+      <TeamManagement />
     </SideMenuLayout>
   );
 }

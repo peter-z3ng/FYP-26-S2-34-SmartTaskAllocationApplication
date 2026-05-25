@@ -61,7 +61,7 @@ export async function getUserHomeRoute(user, supabase) {
   return { homeRoute: getHomeRouteForRole(role?.role_name) };
 }
 
-export async function requireUserAdmin(request, supabase) {
+export async function requireHomeRoute(request, supabase, allowedRoutes, message) {
   const { user, error } = await getAuthenticatedUser(request, supabase);
 
   if (error) {
@@ -74,9 +74,27 @@ export async function requireUserAdmin(request, supabase) {
     return { error: routeError };
   }
 
-  if (homeRoute !== "/useradmin") {
-    return { error: "Only User Admin accounts can invite users." };
+  if (!allowedRoutes.includes(homeRoute)) {
+    return { error: message };
   }
 
-  return { user };
+  return { user, homeRoute };
+}
+
+export async function requireUserAdmin(request, supabase) {
+  return requireHomeRoute(
+    request,
+    supabase,
+    ["/useradmin/accounts"],
+    "Only User Admin accounts can manage user administration.",
+  );
+}
+
+export async function requireManager(request, supabase) {
+  return requireHomeRoute(
+    request,
+    supabase,
+    ["/manager"],
+    "Only Manager accounts can manage tasks and teams.",
+  );
 }

@@ -86,7 +86,7 @@ export default function AcceptInviteForm() {
         throw new Error(activateResult.error || "Could not activate account.");
       }
 
-      setMessage("Password created. Redirecting to login...");
+      setMessage("Account setup complete. Redirecting to login...");
       await supabase.auth.signOut();
       router.push("/login");
     } catch (acceptError) {
@@ -167,7 +167,7 @@ export default function AcceptInviteForm() {
           disabled={!isReady || isSubmitting}
           className="h-14 w-full rounded-md bg-[#0a2a66] text-base font-bold text-white transition-colors hover:bg-[#061a40] disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {isSubmitting ? "Creating password..." : "Create Password"}
+          {isSubmitting ? "Creating account..." : "Create Account"}
         </button>
       </form>
 

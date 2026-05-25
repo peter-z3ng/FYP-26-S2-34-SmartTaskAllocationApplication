@@ -145,4 +145,3 @@ Table activity_log {
     details text
     created_at timestamptz
 }
-

@@ -1,11 +1,10 @@
 export const sideMenuNavigation = {
   useradmin: {
     label: "User Admin",
-    homeHref: "/useradmin",
+    homeHref: "/useradmin/accounts",
     items: [
-      { label: "Home", href: "/useradmin", icon: "home" },
-      { label: "Organization", href: "/useradmin/organization", icon: "organization" },
       { label: "Accounts", href: "/useradmin/accounts", icon: "users" },
+      { label: "Organization", href: "/useradmin/organization", icon: "organization" },
       { label: "Roles", href: "/useradmin/roles", icon: "settings" },
     ],
   },

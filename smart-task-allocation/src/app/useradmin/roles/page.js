@@ -1,4 +1,4 @@
-import HomePanel from "@/components/HomePanel";
+import RoleManagement from "@/components/RoleManagement";
 import SideMenuLayout from "@/components/SideMenuLayout";
 
 export default function UserAdminRolesPage() {
@@ -8,10 +8,7 @@ export default function UserAdminRolesPage() {
       title="Roles"
       subtitle="Review role definitions used for account routing."
     >
-      <HomePanel
-        title="Role Management"
-        description="This page will list Platform Admin, User Admin, Manager, and Employee role definitions."
-      />
+      <RoleManagement />
     </SideMenuLayout>
   );
 }

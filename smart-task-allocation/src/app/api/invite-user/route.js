@@ -15,9 +15,9 @@ export async function POST(request) {
       return NextResponse.json({ error: authError }, { status: 403 });
     }
 
-    const { email, username, roleId, organizationId } = await request.json();
+    const { email, roleId, organizationId } = await request.json();
     const cleanEmail = cleanString(email).toLowerCase();
-    const cleanUsername = cleanString(username) || cleanEmail.split("@")[0];
+    const temporaryUsername = `pending_${crypto.randomUUID()}`;
     const numericRoleId = Number(roleId);
     const cleanOrganizationId = cleanString(organizationId);
 
@@ -33,7 +33,6 @@ export async function POST(request) {
       await supabase.auth.admin.inviteUserByEmail(cleanEmail, {
         redirectTo,
         data: {
-          username: cleanUsername,
           role_id: numericRoleId,
         },
       });
@@ -56,7 +55,7 @@ export async function POST(request) {
         user_id: invitedUserId,
         role_id: numericRoleId,
         organization_id: cleanOrganizationId || null,
-        username: cleanUsername,
+        username: temporaryUsername,
         email: cleanEmail,
         account_status: "Pending",
       },

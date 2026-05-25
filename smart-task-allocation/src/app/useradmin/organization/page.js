@@ -1,4 +1,4 @@
-import HomePanel from "@/components/HomePanel";
+import OrganizationProfileForm from "@/components/OrganizationProfileForm";
 import SideMenuLayout from "@/components/SideMenuLayout";
 
 export default function UserAdminOrganizationPage() {
@@ -8,10 +8,7 @@ export default function UserAdminOrganizationPage() {
       title="Organization"
       subtitle="View and manage organization details."
     >
-      <HomePanel
-        title="Organization Directory"
-        description="This page will show organization records, contact details, and organization status."
-      />
+      <OrganizationProfileForm />
     </SideMenuLayout>
   );
 }
