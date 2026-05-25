@@ -9,7 +9,7 @@ const ROLE_ROUTES = {
   employee: "/employee",
 };
 
-export function getDashboardRouteForRole(roleName) {
+export function getHomeRouteForRole(roleName) {
   if (!roleName) {
     return null;
   }

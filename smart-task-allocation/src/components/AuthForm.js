@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { getDashboardRouteForRole } from "@/lib/roleRoutes";
 import { getSupabaseBrowserClient } from "@/lib/supabaseClient";
 
 export default function AuthForm() {
@@ -30,66 +29,20 @@ export default function AuthForm() {
         return;
       }
 
-      const { data: accountByUserId, error: accountByUserIdError } = await supabase
-        .from("user_account")
-        .select("role_id")
-        .eq("user_id", data.user.id)
-        .maybeSingle();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const routeResponse = await fetch("/api/home-route", {
+        headers: {
+          Authorization: `Bearer ${sessionData.session?.access_token ?? ""}`,
+        },
+      });
+      const routeResult = await routeResponse.json();
 
-      if (accountByUserIdError) {
-        setError(
-          `Login succeeded, but your account could not be loaded: ${accountByUserIdError.message}`,
-        );
+      if (!routeResponse.ok) {
+        setError(`Login succeeded, but ${routeResult.error}`);
         return;
       }
 
-      let account = accountByUserId;
-
-      if (!account && data.user.email) {
-        const { data: accountByEmail, error: accountByEmailError } = await supabase
-          .from("user_account")
-          .select("role_id")
-          .eq("email", data.user.email)
-          .maybeSingle();
-
-        if (accountByEmailError) {
-          setError(
-            `Login succeeded, but your account could not be loaded: ${accountByEmailError.message}`,
-          );
-          return;
-        }
-
-        account = accountByEmail;
-      }
-
-      if (account?.role_id == null) {
-        setError("Login succeeded, but no account role is assigned to this user.");
-        return;
-      }
-
-      const { data: role, error: roleError } = await supabase
-        .from("role")
-        .select("role_name")
-        .eq("role_id", account.role_id)
-        .maybeSingle();
-
-      if (roleError) {
-        setError(`Login succeeded, but your role could not be loaded: ${roleError.message}`);
-        return;
-      }
-
-      const roleName =
-        role?.role_name ??
-        data.user.app_metadata?.role ??
-        data.user.user_metadata?.role;
-      const dashboardRoute = getDashboardRouteForRole(roleName);
-
-      if (!dashboardRoute) {
-        setError("Login succeeded, but your account role does not have a dashboard.");
-        return;
-      }
-
-      router.push(dashboardRoute);
+      router.push(routeResult.homeRoute);
       router.refresh();
     } catch (authError) {
       setError(authError.message);

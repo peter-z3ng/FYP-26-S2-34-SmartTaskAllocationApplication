@@ -7,6 +7,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabaseClient";
 
 export default function AcceptInviteForm() {
   const router = useRouter();
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -76,6 +77,7 @@ export default function AcceptInviteForm() {
         body: JSON.stringify({
           userId: userData.user.id,
           email: userData.user.email,
+          username,
         }),
       });
       const activateResult = await activateResponse.json();
@@ -99,6 +101,20 @@ export default function AcceptInviteForm() {
       <h1 className="text-center text-3xl font-bold text-[#061a40]">Accept Invite</h1>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+        <div className="space-y-3">
+          <label htmlFor="username" className="block text-base font-medium text-[#061a40]">
+            Username
+          </label>
+          <input
+            id="username"
+            type="text"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            required
+            disabled={!isReady}
+            className="h-14 w-full rounded-md border border-[#b8c4d8] bg-transparent px-4 text-base text-[#061a40] outline-none transition-colors focus:border-[#0a2a66] focus:ring-2 focus:ring-[#0a2a66]/20 disabled:bg-slate-100"
+          />
+        </div>
         <div className="space-y-3">
           <label htmlFor="password" className="block text-base font-medium text-[#061a40]">
             Password

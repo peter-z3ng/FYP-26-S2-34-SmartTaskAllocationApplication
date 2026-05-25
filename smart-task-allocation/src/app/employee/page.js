@@ -1,7 +1,23 @@
-export default function EmployeeDashboardPage() {
+import HomePanel from "@/components/HomePanel";
+import SideMenuLayout from "@/components/SideMenuLayout";
+
+export default function EmployeeHomePage() {
   return (
-    <main className="min-h-screen bg-[#f4f7fb] px-8 py-10 text-[#061a40]">
-      <h1 className="text-3xl font-bold">Employee Dashboard</h1>
-    </main>
+    <SideMenuLayout
+      actor="employee"
+      title="Employee Home"
+      subtitle="View assigned work, availability, and task updates."
+    >
+      <div className="grid gap-6 lg:grid-cols-2">
+        <HomePanel
+          title="My Assigned Tasks"
+          description="A personal summary area for current assignments, due dates, and task statuses."
+        />
+        <HomePanel
+          title="Availability"
+          description="A quick view for work availability and scheduling preferences."
+        />
+      </div>
+    </SideMenuLayout>
   );
 }

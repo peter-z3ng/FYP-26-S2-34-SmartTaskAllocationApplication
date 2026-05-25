@@ -1,4 +1,4 @@
-import { getDashboardRouteForRole } from "@/lib/roleRoutes";
+import { getHomeRouteForRole } from "@/lib/roleRoutes";
 
 export async function getAuthenticatedUser(request, supabase) {
   const authorization = request.headers.get("authorization") ?? "";
@@ -17,7 +17,7 @@ export async function getAuthenticatedUser(request, supabase) {
   return { user: data.user };
 }
 
-export async function getUserDashboardRoute(user, supabase) {
+export async function getUserHomeRoute(user, supabase) {
   const { data: accountByUserId, error: accountByUserIdError } = await supabase
     .from("user_account")
     .select("role_id")
@@ -58,7 +58,7 @@ export async function getUserDashboardRoute(user, supabase) {
     return { error: roleError.message };
   }
 
-  return { dashboardRoute: getDashboardRouteForRole(role?.role_name) };
+  return { homeRoute: getHomeRouteForRole(role?.role_name) };
 }
 
 export async function requireUserAdmin(request, supabase) {
@@ -68,13 +68,13 @@ export async function requireUserAdmin(request, supabase) {
     return { error };
   }
 
-  const { dashboardRoute, error: routeError } = await getUserDashboardRoute(user, supabase);
+  const { homeRoute, error: routeError } = await getUserHomeRoute(user, supabase);
 
   if (routeError) {
     return { error: routeError };
   }
 
-  if (dashboardRoute !== "/useradmin") {
+  if (homeRoute !== "/useradmin") {
     return { error: "Only User Admin accounts can invite users." };
   }
 

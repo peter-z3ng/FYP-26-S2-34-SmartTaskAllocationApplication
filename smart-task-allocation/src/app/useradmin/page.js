@@ -1,10 +1,23 @@
-import InviteUserForm from "@/components/InviteUserForm";
+import HomePanel from "@/components/HomePanel";
+import SideMenuLayout from "@/components/SideMenuLayout";
 
-export default function UserAdminDashboardPage() {
+export default function UserAdminHomePage() {
   return (
-    <main className="min-h-screen bg-[#f4f7fb] px-8 py-10 text-[#061a40]">
-      <h1 className="text-3xl font-bold">User Admin Dashboard</h1>
-      <InviteUserForm />
-    </main>
+    <SideMenuLayout
+      actor="useradmin"
+      title="User Admin Home"
+      subtitle="Create invited accounts and manage access for your organization."
+    >
+      <div className="grid gap-6 lg:grid-cols-2">
+        <HomePanel
+          title="Account Management"
+          description="Create accounts directly or send invitation emails from the Accounts page."
+        />
+        <HomePanel
+          title="Organization Access"
+          description="Review organizations, accounts, and role assignments from the User Admin menu."
+        />
+      </div>
+    </SideMenuLayout>
   );
 }

@@ -15,56 +15,62 @@ export async function POST(request) {
       return NextResponse.json({ error: authError }, { status: 403 });
     }
 
-    const { email, username, roleId, organizationId } = await request.json();
+    const { email, username, password, roleId, organizationId } = await request.json();
     const cleanEmail = cleanString(email).toLowerCase();
-    const cleanUsername = cleanString(username) || cleanEmail.split("@")[0];
+    const cleanUsername = cleanString(username);
+    const cleanPassword = cleanString(password);
     const numericRoleId = Number(roleId);
     const cleanOrganizationId = cleanString(organizationId);
 
-    if (!cleanEmail || !Number.isInteger(numericRoleId)) {
+    if (
+      !cleanEmail ||
+      !cleanUsername ||
+      cleanPassword.length < 6 ||
+      !Number.isInteger(numericRoleId)
+    ) {
       return NextResponse.json(
-        { error: "Email and role are required." },
+        { error: "Email, username, password, and role are required." },
         { status: 400 },
       );
     }
 
-    const redirectTo = new URL("/accept-invite", request.url).toString();
-    const { data: inviteData, error: inviteError } =
-      await supabase.auth.admin.inviteUserByEmail(cleanEmail, {
-        redirectTo,
-        data: {
-          username: cleanUsername,
-          role_id: numericRoleId,
-        },
-      });
+    const { data: createdData, error: createError } = await supabase.auth.admin.createUser({
+      email: cleanEmail,
+      password: cleanPassword,
+      email_confirm: true,
+      user_metadata: {
+        username: cleanUsername,
+        role_id: numericRoleId,
+      },
+    });
 
-    if (inviteError) {
-      return NextResponse.json({ error: inviteError.message }, { status: 400 });
+    if (createError) {
+      return NextResponse.json({ error: createError.message }, { status: 400 });
     }
 
-    const invitedUserId = inviteData.user?.id;
+    const createdUserId = createdData.user?.id;
 
-    if (!invitedUserId) {
+    if (!createdUserId) {
       return NextResponse.json(
-        { error: "Supabase did not return an invited user ID." },
+        { error: "Supabase did not return a created user ID." },
         { status: 400 },
       );
     }
 
     const { error: accountError } = await supabase.from("user_account").upsert(
       {
-        user_id: invitedUserId,
+        user_id: createdUserId,
         role_id: numericRoleId,
         organization_id: cleanOrganizationId || null,
         username: cleanUsername,
         email: cleanEmail,
-        account_status: "Pending",
+        account_status: "Active",
       },
       { onConflict: "user_id" },
     );
 
     if (accountError) {
-      await supabase.auth.admin.deleteUser(invitedUserId);
+      await supabase.auth.admin.deleteUser(createdUserId);
       return NextResponse.json({ error: accountError.message }, { status: 400 });
     }
 

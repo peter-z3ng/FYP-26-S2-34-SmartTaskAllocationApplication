@@ -11,20 +11,30 @@ export async function POST(request) {
       return NextResponse.json({ error: authError }, { status: 403 });
     }
 
-    const { userId, email } = await request.json();
+    const { userId, email, username } = await request.json();
 
-    if (userId !== user.id && email !== user.email) {
+    if (!userId || !email || !username) {
       return NextResponse.json(
-        { error: "You can only activate your own account." },
-        { status: 403 },
+        { error: "User ID, email, and username are required." },
+        { status: 400 }
       );
     }
 
-    let query = supabase.from("user_account").update({ account_status: "Active" });
+    if (userId !== user.id || email !== user.email) {
+      return NextResponse.json(
+        { error: "You can only activate your own account." },
+        { status: 403 }
+      );
+    }
 
-    query = userId ? query.eq("user_id", userId) : query.eq("email", email);
-
-    const { error } = await query;
+    const { error } = await supabase
+      .from("user_account")
+      .update({
+        username,
+        account_status: "Active",
+      })
+      .eq("user_id", userId)
+      .eq("email", email);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
