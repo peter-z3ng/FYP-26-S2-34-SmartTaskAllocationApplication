@@ -84,80 +84,82 @@ export default function SideMenuLayout({ actor, title, subtitle, children }) {
   return (
     <main className="min-h-screen bg-[#E0E5E9] text-[#07183b] sm:p-6 lg:p-8">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-[1600px] gap-6 rounded-[28px] bg-[#C7DDEB] p-4 shadow-[0_28px_80px_rgba(7,24,59,0.12)] sm:p-6">
-        <aside className="group hidden w-16 shrink-0 flex-col items-center justify-between rounded-[24px] bg-white py-6 shadow-sm transition-all duration-300 hover:w-56 md:flex">
-          <div className="flex w-full flex-col items-center gap-8">
-            <Link
-              href={navigation.homeHref}
-              className="flex w-full items-center gap-3 px-2"
-              aria-label="Home"
-            >
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#0a2a66] text-sm font-black text-white">
-                ST
-              </div>
+        <div className="hidden w-16 mt-20 shrink-0 flex-col z-10 justify-between md:flex">
+          <aside className="group flex w-16 flex-col items-center rounded-[34px] bg-white/40 py-6 backdrop-blur-sm shadow-sm transition-all duration-300 hover:w-56">
+            <div className="flex w-full flex-col items-center gap-8">
+              <Link
+                href={navigation.homeHref}
+                className="flex w-full items-center gap-3 px-2"
+                aria-label="Home"
+              >
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#0a2a66] text-sm font-black text-white">
+                  ST
+                </div>
 
-              <span className="hidden whitespace-nowrap text-sm font-bold text-[#07183b] group-hover:block">
-                SmartTask
-              </span>
+                <span className="hidden whitespace-nowrap text-sm font-bold text-[#07183b] group-hover:block">
+                  SmartTask
+                </span>
+              </Link>
+
+              <nav
+                className="flex w-full flex-col gap-3 px-2"
+                aria-label={`${navigation.label} navigation`}
+              >
+                {navigation.items.map((item) => {
+                  const isActive = pathname === item.href;
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      title={item.label}
+                      aria-label={item.label}
+                      aria-current={isActive ? "page" : undefined}
+                      className={`flex h-12 w-full items-center gap-3 rounded-2xl px-3 transition-colors ${
+                        isActive
+                          ? "bg-[#0a2a66] text-white shadow-[0_10px_24px_rgba(10,42,102,0.22)]"
+                          : "text-[#07183b] hover:bg-[#eef2f8]"
+                      }`}
+                    >
+                      <NavIcon name={item.icon} />
+
+                      <span className="hidden whitespace-nowrap text-sm font-bold group-hover:block">
+                        {item.label}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+
+            
+          </aside>
+
+          <aside className="group flex w-16 flex-col items-center rounded-full bg-white/40 backdrop-blur-sm py-2 shadow-sm transition-all duration-300">
+                <Link
+              href="/login"
+              title="Log out"
+              aria-label="Log out"
+              className="flex h-12 w-[calc(100%-1rem)] items-center gap-3 rounded-2xl px-3 text-[#07183b] hover:bg-[#eef2f8]"
+            >
+              <svg
+                className="h-5 w-5 shrink-0"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <path d="M16 17l5-5-5-5" />
+                <path d="M21 12H9" />
+              </svg>
             </Link>
-
-            <nav
-              className="flex w-full flex-col gap-3 px-2"
-              aria-label={`${navigation.label} navigation`}
-            >
-              {navigation.items.map((item) => {
-                const isActive = pathname === item.href;
-
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    title={item.label}
-                    aria-label={item.label}
-                    aria-current={isActive ? "page" : undefined}
-                    className={`flex h-12 w-full items-center gap-3 rounded-2xl px-3 transition-colors ${
-                      isActive
-                        ? "bg-[#0a2a66] text-white shadow-[0_10px_24px_rgba(10,42,102,0.22)]"
-                        : "text-[#07183b] hover:bg-[#eef2f8]"
-                    }`}
-                  >
-                    <NavIcon name={item.icon} />
-
-                    <span className="hidden whitespace-nowrap text-sm font-bold group-hover:block">
-                      {item.label}
-                    </span>
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-
-          <Link
-            href="/login"
-            title="Log out"
-            aria-label="Log out"
-            className="flex h-12 w-[calc(100%-1rem)] items-center gap-3 rounded-2xl px-3 text-[#07183b] hover:bg-[#eef2f8]"
-          >
-            <svg
-              className="h-5 w-5 shrink-0"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <path d="M16 17l5-5-5-5" />
-              <path d="M21 12H9" />
-            </svg>
-
-            <span className="hidden whitespace-nowrap text-sm font-bold group-hover:block">
-              Log out
-            </span>
-          </Link>
-        </aside>
-
+          </aside>
+        </div>
+          
         <section className="flex min-w-0 flex-1 flex-col">
           <header className="flex flex-col gap-4 pb-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
