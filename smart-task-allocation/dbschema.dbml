@@ -88,11 +88,11 @@ Table user_qualification {
 
 Table task {
     task_id int [pk]
-    organization_id uuid [ref: > organization.organization_id]
+    organization_id uuid [not null, ref: > organization.organization_id]
     task_code varchar
-    title varchar
+    title varchar [not null]
     description text
-    status varchar
+    status varchar [not null, default: 'Open']
     start_datetime timestamptz
     end_datetime timestamptz
     created_at timestamptz
@@ -119,7 +119,7 @@ Table task_assignment {
     task_id int [ref: > task.task_id]
     user_id uuid [ref: > user_account.user_id]
     assigned_at timestamptz
-    status varchar
+    status varchar [not null, default: 'Assigned']
 }
 
 Table task_assignment_request {
