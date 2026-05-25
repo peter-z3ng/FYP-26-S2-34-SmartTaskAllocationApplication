@@ -84,22 +84,9 @@ export default function SideMenuLayout({ actor, title, subtitle, children }) {
   return (
     <main className="min-h-screen bg-[#E0E5E9] text-[#07183b] sm:p-6 lg:p-8">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-[1600px] gap-6 rounded-[28px] bg-[#C7DDEB] p-4 shadow-[0_28px_80px_rgba(7,24,59,0.12)] sm:p-6">
-        <div className="hidden w-16 mt-20 shrink-0 flex-col z-10 justify-between md:flex">
+        <div className="hidden w-16 mt-28 shrink-0 flex-col z-10 justify-between md:flex">
           <aside className="group flex w-16 flex-col items-center rounded-[34px] bg-white/40 py-6 backdrop-blur-sm shadow-sm transition-all duration-300 hover:w-56">
             <div className="flex w-full flex-col items-center gap-8">
-              <Link
-                href={navigation.homeHref}
-                className="flex w-full items-center gap-3 px-2"
-                aria-label="Home"
-              >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#0a2a66] text-sm font-black text-white">
-                  ST
-                </div>
-
-                <span className="hidden whitespace-nowrap text-sm font-bold text-[#07183b] group-hover:block">
-                  SmartTask
-                </span>
-              </Link>
 
               <nav
                 className="flex w-full flex-col gap-3 px-2"
@@ -115,7 +102,7 @@ export default function SideMenuLayout({ actor, title, subtitle, children }) {
                       title={item.label}
                       aria-label={item.label}
                       aria-current={isActive ? "page" : undefined}
-                      className={`flex h-12 w-full items-center gap-3 rounded-2xl px-3 transition-colors ${
+                      className={`flex h-12 w-full items-center gap-3 rounded-full px-3 transition-colors ${
                         isActive
                           ? "bg-[#0a2a66] text-white shadow-[0_10px_24px_rgba(10,42,102,0.22)]"
                           : "text-[#07183b] hover:bg-[#eef2f8]"
