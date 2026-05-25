@@ -1,0 +1,82 @@
+import { getDashboardRouteForRole } from "@/lib/roleRoutes";
+
+export async function getAuthenticatedUser(request, supabase) {
+  const authorization = request.headers.get("authorization") ?? "";
+  const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
+
+  if (!token) {
+    return { error: "Authentication token is required." };
+  }
+
+  const { data, error } = await supabase.auth.getUser(token);
+
+  if (error || !data.user) {
+    return { error: error?.message || "Authenticated user could not be loaded." };
+  }
+
+  return { user: data.user };
+}
+
+export async function getUserDashboardRoute(user, supabase) {
+  const { data: accountByUserId, error: accountByUserIdError } = await supabase
+    .from("user_account")
+    .select("role_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (accountByUserIdError) {
+    return { error: accountByUserIdError.message };
+  }
+
+  let account = accountByUserId;
+
+  if (!account && user.email) {
+    const { data: accountByEmail, error: accountByEmailError } = await supabase
+      .from("user_account")
+      .select("role_id")
+      .eq("email", user.email)
+      .maybeSingle();
+
+    if (accountByEmailError) {
+      return { error: accountByEmailError.message };
+    }
+
+    account = accountByEmail;
+  }
+
+  if (account?.role_id == null) {
+    return { error: "No role is assigned to this user." };
+  }
+
+  const { data: role, error: roleError } = await supabase
+    .from("role")
+    .select("role_name")
+    .eq("role_id", account.role_id)
+    .maybeSingle();
+
+  if (roleError) {
+    return { error: roleError.message };
+  }
+
+  return { dashboardRoute: getDashboardRouteForRole(role?.role_name) };
+}
+
+export async function requireUserAdmin(request, supabase) {
+  const { user, error } = await getAuthenticatedUser(request, supabase);
+
+  if (error) {
+    return { error };
+  }
+
+  const { dashboardRoute, error: routeError } = await getUserDashboardRoute(user, supabase);
+
+  if (routeError) {
+    return { error: routeError };
+  }
+
+  if (dashboardRoute !== "/useradmin") {
+    return { error: "Only User Admin accounts can invite users." };
+  }
+
+  return { user };
+}

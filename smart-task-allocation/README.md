@@ -7,6 +7,14 @@ Create a `.env.local` file with your Supabase project values:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+```
+
+Add the invite redirect URL in Supabase:
+
+```text
+Authentication > URL Configuration > Redirect URLs
+http://localhost:3001/accept-invite
 ```
 
 First, run the development server:

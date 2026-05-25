@@ -3,41 +3,93 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { getDashboardRouteForRole } from "@/lib/roleRoutes";
 import { getSupabaseBrowserClient } from "@/lib/supabaseClient";
 
-export default function AuthForm({ mode }) {
+export default function AuthForm() {
   const router = useRouter();
-  const isSignup = mode === "signup";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
-    setMessage("");
     setIsSubmitting(true);
 
     try {
       const supabase = getSupabaseBrowserClient();
-      const authAction = isSignup
-        ? supabase.auth.signUp({ email, password })
-        : supabase.auth.signInWithPassword({ email, password });
-      const { error: authError } = await authAction;
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
       if (authError) {
         setError(authError.message);
         return;
       }
 
-      if (isSignup) {
-        setMessage("Account created. Check your email if confirmation is enabled.");
+      const { data: accountByUserId, error: accountByUserIdError } = await supabase
+        .from("user_account")
+        .select("role_id")
+        .eq("user_id", data.user.id)
+        .maybeSingle();
+
+      if (accountByUserIdError) {
+        setError(
+          `Login succeeded, but your account could not be loaded: ${accountByUserIdError.message}`,
+        );
         return;
       }
 
-      router.push("/");
+      let account = accountByUserId;
+
+      if (!account && data.user.email) {
+        const { data: accountByEmail, error: accountByEmailError } = await supabase
+          .from("user_account")
+          .select("role_id")
+          .eq("email", data.user.email)
+          .maybeSingle();
+
+        if (accountByEmailError) {
+          setError(
+            `Login succeeded, but your account could not be loaded: ${accountByEmailError.message}`,
+          );
+          return;
+        }
+
+        account = accountByEmail;
+      }
+
+      if (account?.role_id == null) {
+        setError("Login succeeded, but no account role is assigned to this user.");
+        return;
+      }
+
+      const { data: role, error: roleError } = await supabase
+        .from("role")
+        .select("role_name")
+        .eq("role_id", account.role_id)
+        .maybeSingle();
+
+      if (roleError) {
+        setError(`Login succeeded, but your role could not be loaded: ${roleError.message}`);
+        return;
+      }
+
+      const roleName =
+        role?.role_name ??
+        data.user.app_metadata?.role ??
+        data.user.user_metadata?.role;
+      const dashboardRoute = getDashboardRouteForRole(roleName);
+
+      if (!dashboardRoute) {
+        setError("Login succeeded, but your account role does not have a dashboard.");
+        return;
+      }
+
+      router.push(dashboardRoute);
       router.refresh();
     } catch (authError) {
       setError(authError.message);
@@ -48,9 +100,7 @@ export default function AuthForm({ mode }) {
 
   return (
     <section className="w-full max-w-xl rounded-[28px] border border-white bg-white/85 px-8 py-10 shadow-[0_28px_80px_rgba(15,42,92,0.18)] sm:px-10">
-      <h1 className="text-center text-3xl font-bold text-[#061a40]">
-        {isSignup ? "Sign up" : "Log in"}
-      </h1>
+      <h1 className="text-center text-3xl font-bold text-[#061a40]">Log in</h1>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-6">
         <div className="space-y-3">
@@ -92,30 +142,18 @@ export default function AuthForm({ mode }) {
           </p>
         ) : null}
 
-        {message ? (
-          <p className="rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-[#0a2a66]">
-            {message}
-          </p>
-        ) : null}
-
         <button
           type="submit"
           disabled={isSubmitting}
           className="h-14 w-full rounded-md bg-[#0a2a66] text-base font-bold text-white transition-colors hover:bg-[#061a40] focus:outline-none focus:ring-2 focus:ring-[#0a2a66] focus:ring-offset-2 focus:ring-offset-white disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {isSubmitting ? "Please wait..." : isSignup ? "Create account" : "Continue"}
+          {isSubmitting ? "Please wait..." : "Continue"}
         </button>
       </form>
 
       <div className="mt-8 space-y-4 text-center">
         <p className="text-sm text-slate-600">
-          {isSignup ? "Already have an account?" : "Need an account?"}{" "}
-          <Link
-            href={isSignup ? "/login" : "/signup"}
-            className="font-bold text-[#0a2a66] transition-colors hover:text-[#061a40]"
-          >
-            {isSignup ? "Log in" : "Sign up"}
-          </Link>
+          Use the account provided by your User Admin.
         </p>
         <Link
           href="/"
