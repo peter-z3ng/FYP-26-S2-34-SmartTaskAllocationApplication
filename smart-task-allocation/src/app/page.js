@@ -253,8 +253,8 @@ export default function Home() {
             />
 
             <PricingCard
-              title="Professional"
-              price="$19/mo"
+              title="Team"
+              price="--/mo"
               featured
               features={[
                 "Smart allocation",
