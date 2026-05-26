@@ -2,13 +2,72 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { featuredFeedback } from "@/lib/feedbackData";
+
+const platformStats = [
+  { label: "Open tasks routed", value: "128" },
+  { label: "Eligible staff found", value: "42" },
+  { label: "Schedule conflicts", value: "0" },
+];
+
+const features = [
+  {
+    title: "Smart employee matching",
+    text: "Check availability, working windows, skills, qualifications, and current workload before assigning work.",
+  },
+  {
+    title: "Clear task operations",
+    text: "Create, update, delete, request, approve, and track tasks from one focused workflow.",
+  },
+  {
+    title: "Role-based workspaces",
+    text: "User admins, managers, employees, platform admins, and guests each see the tools they need.",
+  },
+];
+
+const workflowSteps = [
+  "Manager creates an open task",
+  "System checks eligibility and conflicts",
+  "Employee receives or requests assignment",
+  "Progress, clock events, and history are tracked",
+];
+
+const plans = [
+  {
+    title: "Starter",
+    price: "Free",
+    text: "For small teams starting with simple task tracking.",
+    features: ["Task dashboard", "Employee list", "Manual assignment"],
+  },
+  {
+    title: "Team",
+    price: "Growth",
+    text: "For SMEs that need smarter daily allocation.",
+    featured: true,
+    features: ["Smart allocation", "Availability checks", "Request approval"],
+  },
+  {
+    title: "Enterprise",
+    price: "Custom",
+    text: "For organizations with advanced workflow needs.",
+    features: ["AI recommendations", "Priority support", "Custom reporting"],
+  },
+];
 
 export default function Home() {
   const [scrolled, setScrolled] = useState(false);
+  const [supportForm, setSupportForm] = useState({
+    name: "",
+    email: "",
+    inquiryType: "General Question",
+    message: "",
+  });
+  const [supportMessage, setSupportMessage] = useState("");
+  const [supportError, setSupportError] = useState("");
 
   useEffect(() => {
     function handleScroll() {
-      setScrolled(window.scrollY > 120);
+      setScrolled(window.scrollY > 48);
     }
 
     window.addEventListener("scroll", handleScroll);
@@ -17,390 +76,417 @@ export default function Home() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  function updateSupportField(field, value) {
+    setSupportForm((current) => ({ ...current, [field]: value }));
+  }
+
+  async function submitSupportInquiry(event) {
+    event.preventDefault();
+    setSupportMessage("");
+    setSupportError("");
+
+    try {
+      const response = await fetch("/api/contact-support", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(supportForm),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Could not submit support inquiry.");
+      }
+
+      setSupportMessage("Your inquiry has been submitted.");
+      setSupportForm({
+        name: "",
+        email: "",
+        inquiryType: "General Question",
+        message: "",
+      });
+    } catch (error) {
+      setSupportError(error.message);
+    }
+  }
+
   return (
-    <main className="min-h-screen overflow-hidden bg-[#0D1E4C] text-white">
-      {/* Hero */}
-      <section className="relative min-h-screen overflow-hidden bg-gradient-to-b from-[#304FA8] via-[#4668C8] to-[#C7DDEB]">
-        {/* Background Glow */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.15),transparent_60%)]" />
-
-        {/* Navbar */}
-        <header className="relative z-40 mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
+    <main className="landing-flow relative min-h-screen overflow-hidden text-white">
+      <AnimatedBackdrop />
+      <header
+        className={`animate-slide-down fixed inset-x-0 top-0 z-50 border-b transition ${
+          scrolled
+            ? "border-white/10 bg-[#071428]/90 shadow-lg backdrop-blur"
+            : "border-transparent bg-transparent"
+        }`}
+      >
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-sm font-black backdrop-blur-md">
+            <span className="button-lift grid h-10 w-10 place-items-center rounded-lg bg-[#5EEAD4] text-sm font-black text-[#071428]">
               W+
-            </div>
-
-            <span className="text-lg font-bold tracking-wide">
-              Workflow+
             </span>
+            <span className="text-lg font-black tracking-wide">Workflow+</span>
           </Link>
 
-          <nav className="hidden items-center gap-8 text-sm font-medium text-white/85 md:flex">
-            <a href="#demo" className="hover:text-white">
-              Product Demo
+          <nav className="hidden items-center gap-7 text-sm font-semibold text-white/75 lg:flex">
+            <a href="#features" className="hover:text-white">
+              Features
             </a>
-
-            <a href="#testimonials" className="hover:text-white">
-              Testimonials
+            <a href="#workflow" className="hover:text-white">
+              Workflow
             </a>
-
-            <a href="#announcement" className="hover:text-white">
-              Announcement
-            </a>
-
+            <Link href="/feedback" className="hover:text-white">
+              Feedback
+            </Link>
             <a href="#pricing" className="hover:text-white">
               Pricing
             </a>
-
-            <a href="#about" className="hover:text-white">
-              About
+            <a href="#contact" className="hover:text-white">
+              Contact
             </a>
           </nav>
 
           <Link
             href="/login"
-            className="rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/20"
+            className="button-lift rounded-lg bg-white px-5 py-2.5 text-sm font-black text-[#071428] hover:bg-[#D9F99D]"
           >
-            Get Started
+            Sign in
           </Link>
-        </header>
+        </div>
+      </header>
 
-        {/* Scroll Title */}
-        <h1
-          className={`fixed left-1/2 z-50 -translate-x-1/2 text-center font-extralight tracking-[0.18em] text-white transition-all duration-500 ${
-            scrolled
-              ? "top-10 left-40 text-2xl md:text-3xl bg-[#BBE1FA]/60 px-6 py-3 rounded-full backdrop-blur-md shadow-sm"
-              : "top-32 text-6xl md:text-[9rem]"
-          }`}
-        >
-          Workflow+
-        </h1>
+      <section className="relative isolate z-10 overflow-hidden pt-24">
+        <div className="mx-auto grid min-h-[calc(100vh-6rem)] max-w-7xl gap-12 px-6 py-20 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <div>
+            <p className="animate-reveal inline-flex rounded-lg border border-[#5EEAD4]/30 bg-[#5EEAD4]/10 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-[#A7F3D0]">
+              Smart Task Allocation Platform
+            </p>
+            <h1 className="animate-reveal delay-100 mt-7 max-w-3xl text-5xl font-black leading-tight tracking-tight md:text-7xl">
+              Assign the right work to the right people.
+            </h1>
+            <p className="animate-reveal delay-200 mt-6 max-w-2xl text-lg leading-8 text-slate-200">
+              Workflow+ helps SMEs reduce manual scheduling, avoid double booking, and keep task progress visible across managers and employees.
+            </p>
 
-        {/* Hero Content */}
-        <div className="relative z-10 mx-auto flex min-h-screen max-w-5xl flex-col items-center justify-center px-6 pt-48 text-center">
-          <p className="rounded-full border border-white/20 bg-white/10 px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] backdrop-blur-md">
-            Smart Task Allocation Platform
-          </p>
+            <div className="animate-reveal delay-300 mt-9 flex flex-col gap-3 sm:flex-row">
+              <Link
+                href="/signup"
+                className="button-lift rounded-lg bg-[#5EEAD4] px-7 py-3 text-center text-sm font-black text-[#071428] shadow-[0_18px_50px_rgba(94,234,212,0.28)] hover:bg-[#99F6E4]"
+              >
+                Create workspace
+              </Link>
+              <a
+                href="#features"
+                className="button-lift rounded-lg border border-white/20 bg-white/10 px-7 py-3 text-center text-sm font-black text-white hover:bg-white/15"
+              >
+                Explore features
+              </a>
+            </div>
 
-          <p className="mt-10 max-w-2xl text-lg leading-8 text-white/85">
-            Automate task assignment, manage staff availability, and simplify
-            daily workforce operations with one intelligent platform.
-          </p>
-
-          <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-            <Link
-              href="/login"
-              className="rounded-full bg-white/20 px-8 py-3 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/30"
-            >
-              Get Started
-            </Link>
-
-            <a
-              href="#demo"
-              className="rounded-full border border-white/20 bg-white/10 px-8 py-3 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/20"
-            >
-              View Demo
-            </a>
-          </div>
-
-          {/* Home Preview */}
-          <div className="mt-24 w-full max-w-5xl rounded-[36px] border border-white/20 bg-white/10 p-4 shadow-[0_40px_120px_rgba(13,30,76,0.45)] backdrop-blur-xl">
-            <div className="rounded-[28px] border border-white/10 bg-[#0D1E4C]/40 p-8">
-              <div className="mb-8 flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-white/60">Home</p>
-                  <h2 className="text-2xl font-semibold">
-                    Today&apos;s Workforce Overview
-                  </h2>
+            <div className="animate-reveal delay-400 mt-12 grid max-w-2xl gap-3 sm:grid-cols-3">
+              {platformStats.map((stat, index) => (
+                <div key={stat.label} className={`motion-card rounded-lg border border-white/10 bg-white/10 p-4 delay-${Math.min(index + 1, 4)}00`}>
+                  <p className="text-3xl font-black text-white">{stat.value}</p>
+                  <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-300">{stat.label}</p>
                 </div>
-
-                <button className="rounded-full bg-white/15 px-5 py-2 text-xs font-semibold backdrop-blur-md">
-                  + Create Task
-                </button>
-              </div>
-
-              <div className="grid gap-5 md:grid-cols-3">
-                <PreviewCard title="Pending Tasks" value="12" />
-                <PreviewCard title="Assigned Staff" value="28" />
-                <PreviewCard title="Completed Tasks" value="19" />
-              </div>
-
-              <div className="mt-6 grid gap-5 md:grid-cols-2">
-                <TaskRow task="Inventory Restock" person="Alicia Tan" />
-                <TaskRow task="Outlet Cleaning" person="Ben Lee" />
-                <TaskRow task="Customer Support" person="Chen Wei" />
-                <TaskRow task="Delivery Packing" person="Daniel Ong" />
-              </div>
+              ))}
             </div>
           </div>
+
+          <DashboardPreview />
         </div>
       </section>
 
-      {/* Product Demo */}
-      <section id="demo" className="bg-[#E0E5E9] px-6 py-28 text-[#0D1E4C]">
-        <div className="mx-auto max-w-7xl">
+      <section id="features" className="relative z-10 overflow-hidden px-6 py-28 text-white">
+        <div className="relative mx-auto max-w-7xl">
           <SectionTitle
-            label="Product Demo"
-            title="Everything in one intelligent workspace"
-            text="Manage staff, allocate tasks, monitor schedules, and improve daily operations through one clean interface."
+            dark
+            label="Core Features"
+            title="Built around real allocation decisions"
+            text="The platform connects task requirements with employee capacity so managers can move faster without losing control."
           />
-
-          <div className="grid gap-6 md:grid-cols-3">
-            <DemoCard
-              title="Smart Allocation"
-              text="Automatically assign suitable employees based on role and availability."
-            />
-
-            <DemoCard
-              title="Schedule Tracking"
-              text="View workforce schedules and task progress in real time."
-            />
-
-            <DemoCard
-              title="Operational Insights"
-              text="Monitor workloads, assignments, and workforce efficiency easily."
-            />
+          <div className="grid gap-5 md:grid-cols-3">
+            {features.map((feature, index) => (
+              <FeatureCard key={feature.title} index={index + 1} {...feature} />
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section
-        id="testimonials"
-        className="bg-white px-6 py-28 text-[#0D1E4C]"
-      >
-        <div className="mx-auto max-w-7xl">
+      <section id="workflow" className="relative z-10 overflow-hidden px-6 py-28 text-white">
+        <div className="relative mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
           <SectionTitle
-            label="Testimonials"
-            title="Trusted by growing SMEs"
-            text="Teams use Workflow+ to reduce manual workload and improve operational efficiency."
+            dark
+            alignLeft
+            label="Workflow"
+            title="From open task to completed work"
+            text="Every allocation produces a clear trail: who requested, who approved, who was assigned, and how the task progressed."
           />
-
-          <div className="grid gap-6 md:grid-cols-3">
-            <TestimonialCard
-              quote="Workflow+ reduced our manual scheduling work significantly."
-              name="Alicia Tan"
-              role="Operations Manager"
-            />
-
-            <TestimonialCard
-              quote="The smart allocation feature improved our team productivity."
-              name="Ben Lee"
-              role="Store Supervisor"
-            />
-
-            <TestimonialCard
-              quote="Clean interface and simple workflow management."
-              name="Chen Wei"
-              role="Business Owner"
-            />
+          <div className="grid gap-4">
+            {workflowSteps.map((step, index) => (
+              <div key={step} className="motion-card grid grid-cols-[44px_1fr] gap-4 rounded-lg border border-white/10 bg-white/10 p-5 shadow-[0_18px_50px_rgba(0,0,0,0.16)] backdrop-blur-xl">
+                <span className="grid h-11 w-11 place-items-center rounded-lg bg-[#5EEAD4] text-sm font-black text-[#071428]">
+                  {index + 1}
+                </span>
+                <div>
+                  <h3 className="font-black text-white">{step}</h3>
+                  <p className="mt-1 text-sm leading-6 text-slate-300">
+                    {index === 1
+                      ? "Availability, duplicate booking, active assignments, skills, and qualifications are checked before confirmation."
+                      : "The system keeps the next action clear for the responsible role."}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Announcement */}
-      <section
-        id="announcement"
-        className="bg-[#C7DDEB] px-6 py-28 text-[#0D1E4C]"
-      >
-        <div className="mx-auto max-w-6xl rounded-[36px] bg-white p-10 shadow-[0_25px_80px_rgba(13,30,76,0.12)]">
-          <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#4668C8]">
-                Announcement
-              </p>
-
-              <h2 className="mt-4 text-4xl font-light">
-                AI-powered task suggestions coming soon
-              </h2>
-
-              <p className="mt-5 max-w-2xl text-[#52627a]">
-                Workflow+ is introducing intelligent recommendations to improve
-                task allocation accuracy and workforce productivity.
-              </p>
-            </div>
-
+      <section id="feedback" className="relative z-10 overflow-hidden px-6 py-28 text-white">
+        <div className="relative mx-auto max-w-7xl">
+          <SectionTitle
+            dark
+            label="User Feedback"
+            title="Designed for small teams that need clarity"
+            text="Workflow+ presents allocation work in simple screens for daily operations."
+          />
+          <div className="grid gap-5 md:grid-cols-3">
+            {featuredFeedback.map((item) => (
+              <TestimonialCard key={item.name} {...item} />
+            ))}
+          </div>
+          <div className="mt-10 text-center">
             <Link
-              href="/login"
-              className="inline-flex h-12 items-center justify-center rounded-full bg-[#0D1E4C] px-7 text-sm font-bold text-white transition hover:opacity-90"
+              href="/feedback"
+              className="button-lift inline-flex h-12 items-center justify-center rounded-md bg-[#0B2B45] px-7 text-sm font-black text-white transition hover:bg-[#123D5D]"
             >
-              Learn More
+              View all customer feedback
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Pricing */}
-      <section id="pricing" className="bg-[#0D1E4C] px-6 py-28">
-        <div className="mx-auto max-w-7xl">
+      <section id="pricing" className="relative z-10 overflow-hidden px-6 py-28">
+        <div className="relative mx-auto max-w-7xl">
           <SectionTitle
-            label="Pricing"
-            title="Flexible plans for every organization"
-            text="Start free and upgrade when your workforce grows."
             dark
+            label="Plans"
+            title="Start lean, add intelligence as you grow"
+            text="The PRD supports basic operations, smart allocation, analytics, AI recommendations, and support workflows."
           />
-
-          <div className="grid gap-6 md:grid-cols-3">
-            <PricingCard
-              title="Starter"
-              price="Free"
-              features={[
-                "Basic task allocation",
-                "Employee management",
-                "Dashboard overview",
-              ]}
-            />
-
-            <PricingCard
-              title="Team"
-              price="--/mo"
-              featured
-              features={[
-                "Smart allocation",
-                "Analytics dashboard",
-                "Priority support",
-              ]}
-            />
-
-            <PricingCard
-              title="Enterprise"
-              price="Custom"
-              features={[
-                "Advanced AI tools",
-                "Custom integrations",
-                "Dedicated support",
-              ]}
-            />
+          <div className="grid gap-5 md:grid-cols-3">
+            {plans.map((plan) => (
+              <PricingCard key={plan.title} {...plan} />
+            ))}
           </div>
         </div>
       </section>
 
-      {/* About */}
-      <section
-        id="about"
-        className="bg-[#E0E5E9] px-6 py-28 text-[#0D1E4C]"
-      >
-        <div className="mx-auto max-w-5xl text-center">
-          <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#4668C8]">
-            About Workflow+
-          </p>
+      <section id="contact" className="relative z-10 px-6 py-28 text-white">
+        <div className="relative mx-auto grid max-w-6xl gap-10 lg:grid-cols-[0.85fr_1fr] lg:items-start">
+          <SectionTitle
+            dark
+            alignLeft
+            label="Contact Support"
+            title="Questions before signing up?"
+            text="Send a technical, pricing, account registration, or general inquiry to platform support."
+          />
 
-          <h2 className="mt-4 text-4xl font-light md:text-5xl">
-            Built for modern workforce management
-          </h2>
-
-          <p className="mx-auto mt-8 max-w-3xl text-lg leading-8 text-[#52627a]">
-            Workflow+ is a smart task allocation platform designed for SMEs to
-            simplify workforce operations, improve scheduling efficiency, and
-            automate manual task assignment workflows.
-          </p>
+          <form onSubmit={submitSupportInquiry} className="motion-card rounded-lg border border-white/15 bg-white/90 p-6 text-[#071428] shadow-[0_24px_80px_rgba(0,0,0,0.22)] backdrop-blur-xl">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <input
+                value={supportForm.name}
+                onChange={(event) => updateSupportField("name", event.target.value)}
+                placeholder="Name"
+                className="h-12 rounded-md border border-[#B8C4D8] px-3 text-sm outline-none"
+                required
+              />
+              <input
+                type="email"
+                value={supportForm.email}
+                onChange={(event) => updateSupportField("email", event.target.value)}
+                placeholder="Email address"
+                className="h-12 rounded-md border border-[#B8C4D8] px-3 text-sm outline-none"
+                required
+              />
+            </div>
+            <select
+              value={supportForm.inquiryType}
+              onChange={(event) => updateSupportField("inquiryType", event.target.value)}
+              className="mt-4 h-12 w-full rounded-md border border-[#B8C4D8] bg-white px-3 text-sm outline-none"
+            >
+              <option>Technical Support</option>
+              <option>Pricing</option>
+              <option>Account Registration</option>
+              <option>General Question</option>
+            </select>
+            <textarea
+              value={supportForm.message}
+              onChange={(event) => updateSupportField("message", event.target.value)}
+              placeholder="Message"
+              className="mt-4 min-h-32 w-full rounded-md border border-[#B8C4D8] px-3 py-2 text-sm outline-none"
+              required
+            />
+            {supportError ? <p className="mt-4 text-sm font-semibold text-red-700">{supportError}</p> : null}
+            {supportMessage ? <p className="mt-4 text-sm font-semibold text-[#0F766E]">{supportMessage}</p> : null}
+            <button className="mt-5 h-12 rounded-md bg-[#0B2B45] px-6 text-sm font-black text-white transition hover:bg-[#123D5D]">
+              Submit Inquiry
+            </button>
+          </form>
         </div>
       </section>
     </main>
   );
 }
 
-function PreviewCard({ title, value }) {
+function AnimatedBackdrop() {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/10 p-5 backdrop-blur-md">
-      <p className="text-xs text-white/60">{title}</p>
-      <p className="mt-3 text-4xl font-bold">{value}</p>
+    <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+      <div className="animated-base absolute inset-0" />
+      <div className="animated-mesh absolute inset-0" />
+      <div className="aurora-ribbon ribbon-one absolute left-[-10%] top-[8%] h-72 w-[120%] rotate-[-8deg]" />
+      <div className="aurora-ribbon ribbon-two absolute left-[-12%] top-[42%] h-80 w-[125%] rotate-[7deg]" />
+      <div className="aurora-ribbon ribbon-three absolute left-[-18%] bottom-[5%] h-72 w-[130%] rotate-[-4deg]" />
+      <div className="particle-field absolute inset-0" />
+      <div className="site-vignette absolute inset-0" />
     </div>
   );
 }
 
-function TaskRow({ task, person }) {
+function DashboardPreview() {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/10 p-5 backdrop-blur-md">
-      <p className="font-semibold">{task}</p>
-      <p className="mt-1 text-sm text-white/65">{person}</p>
-    </div>
-  );
-}
+    <div className="animate-reveal delay-300 float-panel relative">
+      <div className="rounded-lg border border-white/15 bg-[#F7FAFC] p-4 text-[#071428] shadow-[0_28px_90px_rgba(0,0,0,0.35)]">
+        <div className="rounded-lg border border-[#D8E3EE] bg-white">
+          <div className="flex items-center justify-between border-b border-[#E2E8F0] px-5 py-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0F766E]">Manager Dashboard</p>
+              <h2 className="mt-1 text-xl font-black">Today&apos;s allocation board</h2>
+            </div>
+            <span className="pulse-live rounded-md bg-[#DCFCE7] px-3 py-1 text-xs font-black text-[#166534]">Live</span>
+          </div>
 
-function SectionTitle({ label, title, text, dark }) {
-  return (
-    <div className="mb-16 text-center">
-      <p
-        className={`text-sm font-bold uppercase tracking-[0.2em] ${
-          dark ? "text-[#BBE1FA]" : "text-[#4668C8]"
-        }`}
-      >
-        {label}
-      </p>
+          <div className="grid gap-4 p-5 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="space-y-3">
+              <TaskPreviewRow title="Front desk coverage" person="Alicia Tan" status="Eligible" tone="green" />
+              <TaskPreviewRow title="Inventory count" person="Ben Lee" status="Pending" tone="amber" />
+              <TaskPreviewRow title="Customer support queue" person="Chen Wei" status="Assigned" tone="blue" />
+              <TaskPreviewRow title="Outlet closing checklist" person="Daniel Ong" status="Conflict free" tone="green" />
+            </div>
 
-      <h2 className="mt-4 text-4xl font-light md:text-5xl">
-        {title}
-      </h2>
-
-      <p
-        className={`mx-auto mt-6 max-w-2xl text-lg ${
-          dark ? "text-white/70" : "text-[#52627a]"
-        }`}
-      >
-        {text}
-      </p>
-    </div>
-  );
-}
-
-function DemoCard({ title, text }) {
-  return (
-    <div className="rounded-[32px] bg-white p-8 shadow-[0_20px_60px_rgba(13,30,76,0.08)]">
-      <h3 className="text-2xl font-semibold">{title}</h3>
-
-      <p className="mt-4 leading-8 text-[#52627a]">
-        {text}
-      </p>
-    </div>
-  );
-}
-
-function TestimonialCard({ quote, name, role }) {
-  return (
-    <div className="rounded-[32px] bg-[#F8FBFD] p-8 shadow-sm">
-      <p className="text-lg leading-8 text-[#415579]">
-        “{quote}”
-      </p>
-
-      <div className="mt-8">
-        <p className="font-bold">{name}</p>
-        <p className="text-sm text-[#627391]">{role}</p>
+            <div className="rounded-lg bg-[#0B2B45] p-5 text-white">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#5EEAD4]">Auto recommendation</p>
+              <h3 className="mt-3 text-2xl font-black">Best match found</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-200">
+                The system ranked employees by availability, schedule conflicts, and required qualifications.
+              </p>
+              <div className="motion-card mt-5 rounded-lg bg-white/10 p-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span>Alicia Tan</span>
+                  <span className="font-black text-[#D9F99D]">98%</span>
+                </div>
+                <div className="mt-3 h-2 rounded-full bg-white/10">
+                  <div className="progress-sweep h-2 w-[98%] rounded-full bg-[#5EEAD4]" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-function PricingCard({ title, price, features, featured }) {
+function TaskPreviewRow({ title, person, status, tone }) {
+  const tones = {
+    green: "bg-[#DCFCE7] text-[#166534]",
+    amber: "bg-[#FEF3C7] text-[#92400E]",
+    blue: "bg-[#DBEAFE] text-[#1E40AF]",
+  };
+
   return (
-    <div
-      className={`rounded-[36px] border p-8 ${
-        featured
-          ? "border-[#BBE1FA] bg-[#4668C8]"
-          : "border-white/10 bg-white/5"
+    <div className="motion-card grid grid-cols-[1fr_auto] gap-3 rounded-lg border border-[#E2E8F0] p-4">
+      <div>
+        <h3 className="font-black">{title}</h3>
+        <p className="mt-1 text-sm text-[#52627A]">{person}</p>
+      </div>
+      <span className={`h-fit rounded-md px-3 py-1 text-xs font-black ${tones[tone]}`}>{status}</span>
+    </div>
+  );
+}
+
+function SectionTitle({ label, title, text, dark, alignLeft }) {
+  return (
+    <div className={`mb-12 ${alignLeft ? "text-left" : "text-center"}`}>
+      <p className={`text-xs font-black uppercase tracking-[0.22em] ${dark ? "text-[#5EEAD4]" : "text-[#0F766E]"}`}>
+        {label}
+      </p>
+      <h2 className={`mt-4 text-4xl font-black tracking-tight md:text-5xl ${dark ? "text-white" : "text-[#071428]"}`}>
+        {title}
+      </h2>
+      <p className={`mt-5 max-w-2xl text-base leading-8 ${alignLeft ? "" : "mx-auto"} ${dark ? "text-slate-300" : "text-[#52627A]"}`}>
+        {text}
+      </p>
+    </div>
+  );
+}
+
+function FeatureCard({ index, title, text }) {
+  return (
+    <article className="animate-reveal motion-card rounded-lg border border-[#D8E3EE] bg-white p-6 shadow-sm">
+      <span className="grid h-11 w-11 place-items-center rounded-lg bg-[#E8F6F3] text-sm font-black text-[#0F766E]">
+        {String(index).padStart(2, "0")}
+      </span>
+      <h3 className="mt-6 text-xl font-black">{title}</h3>
+      <p className="mt-3 text-sm leading-7 text-[#52627A]">{text}</p>
+    </article>
+  );
+}
+
+function TestimonialCard({ quote, name, role, rating }) {
+  return (
+    <Link href="/feedback" className="animate-reveal motion-card block rounded-lg border border-[#BFE4DD] bg-white p-6 shadow-sm">
+      <div className="mb-5 text-sm font-black text-[#0F766E]">
+        {"★".repeat(rating)}
+        {"☆".repeat(5 - rating)}
+      </div>
+      <p className="text-lg font-semibold leading-8 text-[#0B2B45]">&quot;{quote}&quot;</p>
+      <div className="mt-7 border-t border-[#E2E8F0] pt-5">
+        <p className="font-black">{name}</p>
+        <p className="mt-1 text-sm text-[#52627A]">{role}</p>
+        <p className="mt-4 text-xs font-black uppercase tracking-[0.16em] text-[#0F766E]">
+          Read full review
+        </p>
+      </div>
+    </Link>
+  );
+}
+
+function PricingCard({ title, price, text, features, featured }) {
+  return (
+    <article
+      className={`animate-reveal motion-card rounded-lg border p-6 ${
+        featured ? "border-[#5EEAD4] bg-[#0B2B45] text-white shadow-[0_24px_70px_rgba(94,234,212,0.18)]" : "border-white/10 bg-white/5"
       }`}
     >
-      <h3 className="text-2xl font-semibold">{title}</h3>
-
-      <p className="mt-5 text-5xl font-light">{price}</p>
-
-      <ul className="mt-8 space-y-4 text-sm text-white/85">
+      <h3 className="text-2xl font-black">{title}</h3>
+      <p className={`mt-4 text-4xl font-black ${featured ? "text-[#5EEAD4]" : "text-white"}`}>{price}</p>
+      <p className={`mt-3 text-sm leading-6 ${featured ? "text-slate-200" : "text-slate-300"}`}>{text}</p>
+      <ul className="mt-6 space-y-3 text-sm">
         {features.map((feature) => (
-          <li key={feature}>• {feature}</li>
+          <li key={feature} className="flex items-center gap-3">
+            <span className="h-2 w-2 rounded-full bg-[#5EEAD4]" />
+            {feature}
+          </li>
         ))}
       </ul>
-
       <Link
-        href="/login"
-        className={`mt-10 inline-flex h-12 w-full items-center justify-center rounded-full text-sm font-bold ${
-          featured
-            ? "bg-white text-[#0D1E4C]"
-            : "bg-white/10 text-white"
+        href="/signup"
+        className={`button-lift mt-7 inline-flex h-11 w-full items-center justify-center rounded-md text-sm font-black ${
+          featured ? "bg-[#5EEAD4] text-[#071428] hover:bg-[#99F6E4]" : "bg-white text-[#071428] hover:bg-[#D9F99D]"
         }`}
       >
         Get Started
       </Link>
-    </div>
+    </article>
   );
 }

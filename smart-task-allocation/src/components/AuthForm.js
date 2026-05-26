@@ -3,7 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { getSupabaseBrowserClient } from "@/lib/supabaseClient";
+import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabaseClient";
+
+const demoAccounts = [
+  { role: "Platform Admin", email: "platformadmin@workflow.test", password: "Test@123456", homeRoute: "/platformadmin" },
+  { role: "User Admin", email: "useradmin@workflow.test", password: "Test@123456", homeRoute: "/useradmin/accounts" },
+  { role: "Manager", email: "manager@workflow.test", password: "Test@123456", homeRoute: "/manager" },
+  { role: "Employee", email: "employee@workflow.test", password: "Test@123456", homeRoute: "/employee" },
+];
 
 export default function AuthForm() {
   const router = useRouter();
@@ -18,6 +25,21 @@ export default function AuthForm() {
     setIsSubmitting(true);
 
     try {
+      const demoAccount = demoAccounts.find(
+        (account) => account.email === email.trim().toLowerCase() && account.password === password,
+      );
+
+      if (!isSupabaseConfigured()) {
+        if (!demoAccount) {
+          setError("Local demo mode is active. Use one of the listed demo accounts.");
+          return;
+        }
+
+        router.push(demoAccount.homeRoute);
+        router.refresh();
+        return;
+      }
+
       const supabase = getSupabaseBrowserClient();
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
@@ -103,6 +125,41 @@ export default function AuthForm() {
           {isSubmitting ? "Please wait..." : "Continue"}
         </button>
       </form>
+
+      <div className="mt-8 rounded-2xl border border-[#d8e0ee] bg-[#f7fafc] p-4 text-left">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-black uppercase tracking-[0.16em] text-[#0a2a66]">
+              Demo accounts
+            </h2>
+            <p className="mt-2 text-xs leading-5 text-slate-600">
+              If Supabase env values are missing, these accounts work in local demo mode for page testing.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3">
+          {demoAccounts.map((account) => (
+            <button
+              key={account.email}
+              type="button"
+              onClick={() => {
+                setEmail(account.email);
+                setPassword(account.password);
+                setError("");
+              }}
+              className="rounded-lg border border-[#d8e0ee] bg-white p-3 text-left transition hover:-translate-y-0.5 hover:border-[#5EEAD4] hover:shadow-md"
+            >
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <span className="text-sm font-black text-[#061a40]">{account.role}</span>
+                <span className="text-xs font-semibold text-[#0F766E]">Click to fill</span>
+              </div>
+              <p className="mt-1 text-xs text-slate-600">{account.email}</p>
+              <p className="mt-1 text-xs text-slate-500">Password: {account.password}</p>
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="mt-8 space-y-4 text-center">
         <p className="text-sm text-slate-600">

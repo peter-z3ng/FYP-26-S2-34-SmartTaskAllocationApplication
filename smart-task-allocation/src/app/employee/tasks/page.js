@@ -1,4 +1,5 @@
-import HomePanel from "@/components/HomePanel";
+import EmployeeTaskCenter from "@/components/EmployeeTaskCenter";
+import TimeClockPanel from "@/components/TimeClockPanel";
 import SideMenuLayout from "@/components/SideMenuLayout";
 
 export default function EmployeeTasksPage() {
@@ -8,10 +9,10 @@ export default function EmployeeTasksPage() {
       title="My Tasks"
       subtitle="Track your assigned and requested work."
     >
-      <HomePanel
-        title="Assigned Tasks"
-        description="This page will show task assignments, deadlines, and completion status."
-      />
+      <div className="space-y-6">
+        <TimeClockPanel />
+        <EmployeeTaskCenter />
+      </div>
     </SideMenuLayout>
   );
 }

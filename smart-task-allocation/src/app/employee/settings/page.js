@@ -1,4 +1,4 @@
-import HomePanel from "@/components/HomePanel";
+import ProfileSettingsForm from "@/components/ProfileSettingsForm";
 import SideMenuLayout from "@/components/SideMenuLayout";
 
 export default function EmployeeSettingsPage() {
@@ -8,10 +8,7 @@ export default function EmployeeSettingsPage() {
       title="Settings"
       subtitle="Manage your profile and notification preferences."
     >
-      <HomePanel
-        title="Employee Settings"
-        description="This page will contain profile, contact, and notification preferences."
-      />
+      <ProfileSettingsForm />
     </SideMenuLayout>
   );
 }

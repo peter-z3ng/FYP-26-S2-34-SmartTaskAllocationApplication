@@ -98,3 +98,21 @@ export async function requireManager(request, supabase) {
     "Only Manager accounts can manage tasks and teams.",
   );
 }
+
+export async function requireEmployee(request, supabase) {
+  return requireHomeRoute(
+    request,
+    supabase,
+    ["/employee"],
+    "Only Employee accounts can manage employee tasks.",
+  );
+}
+
+export async function requireManagerOrEmployee(request, supabase) {
+  return requireHomeRoute(
+    request,
+    supabase,
+    ["/manager", "/employee"],
+    "Only Manager or Employee accounts can access this task workflow.",
+  );
+}
