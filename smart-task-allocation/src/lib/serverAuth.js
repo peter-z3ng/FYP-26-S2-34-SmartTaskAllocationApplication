@@ -95,6 +95,6 @@ export async function requireManager(request, supabase) {
     request,
     supabase,
     ["/manager"],
-    "Only Manager accounts can manage tasks and teams.",
+    "Only Manager accounts can manage workspaces and teams.",
   );
 }

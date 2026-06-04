@@ -1,7 +1,7 @@
 import SideMenuLayout from "@/components/SideMenuLayout";
-import TaskManagement from "@/components/TaskManagement";
+import WorkspaceManagement from "@/components/WorkspaceManagement";
 
-export default function ManagerTasksPage() {
+export default function ManagerWorkspacePage() {
   return (
     <SideMenuLayout actor="manager">
       <header className="pb-6">
@@ -13,7 +13,7 @@ export default function ManagerTasksPage() {
           Create workspaces and manage team tasks in one shared view.
         </p>
       </header>
-      <TaskManagement />
+      <WorkspaceManagement />
     </SideMenuLayout>
   );
 }

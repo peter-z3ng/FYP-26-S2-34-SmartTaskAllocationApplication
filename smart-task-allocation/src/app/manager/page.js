@@ -10,13 +10,13 @@ export default function ManagerHomePage() {
         </p>
         <h1 className="mt-1 text-3xl font-bold text-[#07183b]">Manager Home</h1>
         <p className="mt-2 text-sm text-[#52627a]">
-          Track team workload, assignments, and task requests.
+          Track team workload, assignments, and workspace requests.
         </p>
       </header>
       <div className="grid gap-6 lg:grid-cols-2">
         <HomePanel
-          title="Task Overview"
-          description="A manager summary area for active tasks, unassigned work, and upcoming deadlines."
+          title="Workspace Overview"
+          description="A manager summary area for active workspace items, unassigned work, and upcoming deadlines."
         />
         <HomePanel
           title="Team Capacity"

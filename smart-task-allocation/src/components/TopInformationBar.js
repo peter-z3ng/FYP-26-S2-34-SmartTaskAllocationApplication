@@ -7,8 +7,8 @@ import { getSupabaseBrowserClient } from "@/lib/supabaseClient";
 import { sideMenuNavigation } from "@/lib/sideMenuNavigation";
 
 const platformActions = [
-  { label: "Create workspace", href: "/manager/tasks", group: "Action" },
-  { label: "Create task", href: "/manager/tasks", group: "Action" },
+  { label: "Create workspace", href: "/manager/workspace", group: "Action" },
+  { label: "Create workspace item", href: "/manager/workspace", group: "Action" },
   { label: "Invite user", href: "/useradmin/accounts", group: "Action" },
   { label: "Organization profile", href: "/useradmin/organization", group: "Action" },
   { label: "Availability schedule", href: "/employee/availability", group: "Action" },

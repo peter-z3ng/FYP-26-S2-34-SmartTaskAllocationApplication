@@ -12,11 +12,6 @@ const emptyTask = {
   endDatetime: "",
 };
 
-const initialWorkspaces = [
-  { id: "project", name: "My Project" },
-  { id: "reporting", name: "Dashboard and reporting" },
-];
-
 const statusStyles = {
   Open: "bg-[#579BFC] text-white",
   "In Progress": "bg-[#FDAB3D] text-white",
@@ -31,18 +26,17 @@ const statusLabels = {
   Cancelled: "Stuck",
 };
 
-export default function TaskManagement() {
+export default function WorkspaceManagement() {
   const [tasks, setTasks] = useState([]);
   const [form, setForm] = useState(emptyTask);
   const [error, setError] = useState("");
   const [isComposerOpen, setIsComposerOpen] = useState(false);
-  const [workspaces, setWorkspaces] = useState(initialWorkspaces);
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("project");
+  const [workspaces, setWorkspaces] = useState([]);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [workspaceName, setWorkspaceName] = useState("");
-  const [isWorkspaceComposerOpen, setIsWorkspaceComposerOpen] = useState(false);
 
   const currentWorkspace = useMemo(
-    () => workspaces.find((workspace) => workspace.id === selectedWorkspaceId),
+    () => workspaces.find((workspace) => workspace.workspace_id === selectedWorkspaceId),
     [selectedWorkspaceId, workspaces]
   );
   const activeTasks = tasks.filter((task) => task.status !== "Completed");
@@ -71,9 +65,26 @@ export default function TaskManagement() {
     }
   }
 
+  async function loadWorkspaces() {
+    try {
+      const response = await fetch("/api/workspaces", { headers: await authHeaders() });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Could not load workspaces.");
+      }
+
+      setWorkspaces(result.workspaces);
+      setSelectedWorkspaceId((current) => current || result.workspaces[0]?.workspace_id || "");
+    } catch (loadError) {
+      setError(loadError.message);
+    }
+  }
+
   useEffect(() => {
     const timeout = setTimeout(() => {
       loadTasks();
+      loadWorkspaces();
     }, 0);
 
     return () => clearTimeout(timeout);
@@ -84,7 +95,7 @@ export default function TaskManagement() {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
-  function createWorkspace(event) {
+  async function createWorkspace(event) {
     event.preventDefault();
     const nextName = workspaceName.trim();
 
@@ -92,15 +103,30 @@ export default function TaskManagement() {
       return;
     }
 
-    const nextWorkspace = {
-      id: `${Date.now()}`,
-      name: nextName,
-    };
+    setError("");
 
-    setWorkspaces((current) => [...current, nextWorkspace]);
-    setSelectedWorkspaceId(nextWorkspace.id);
-    setWorkspaceName("");
-    setIsWorkspaceComposerOpen(false);
+    try {
+      const response = await fetch("/api/workspaces", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(await authHeaders()),
+        },
+        body: JSON.stringify({ workspaceName: nextName }),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Could not create workspace.");
+      }
+
+      setWorkspaceName("");
+      setWorkspaces((current) => [...current, result.workspace]);
+      setSelectedWorkspaceId(result.workspace.workspace_id);
+      await loadWorkspaces();
+    } catch (createError) {
+      setError(createError.message);
+    }
   }
 
   async function saveTask(event) {
@@ -218,83 +244,31 @@ export default function TaskManagement() {
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-[minmax(0,1fr)_56px] gap-3">
-          <label className="relative block">
-            <span className="absolute left-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md bg-[#5b56d6] text-lg font-black text-white">
-              M
-            </span>
-            <select
-              value={selectedWorkspaceId}
-              onChange={(event) => setSelectedWorkspaceId(event.target.value)}
-              className="h-14 w-full appearance-none rounded-md border border-[#c4ccdc] bg-white py-0 pl-14 pr-10 text-lg font-semibold text-[#2f3442] outline-none focus:border-[#0a72e8] focus:ring-2 focus:ring-[#0a72e8]/15"
-            >
-              {workspaces.map((workspace) => (
-                <option key={workspace.id} value={workspace.id}>
-                  {workspace.name}
-                </option>
-              ))}
-            </select>
-            <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-2xl text-[#2f3442]">
-              ⌄
-            </span>
-          </label>
-
+        <form onSubmit={createWorkspace} className="mt-6 flex gap-2">
+          <input
+            value={workspaceName}
+            onChange={(event) => setWorkspaceName(event.target.value)}
+            placeholder="Create workspace"
+            className="h-12 min-w-0 flex-1 rounded-md border border-[#c4ccdc] bg-white px-3 text-sm text-[#2f3442] outline-none focus:border-[#0a72e8] focus:ring-2 focus:ring-[#0a72e8]/15"
+          />
           <button
-            type="button"
-            onClick={() => setIsWorkspaceComposerOpen((current) => !current)}
-            className="flex h-14 w-14 items-center justify-center rounded-md border border-[#c4ccdc] bg-white text-4xl leading-none text-[#2f3442] transition hover:bg-[#eef6ff]"
-            aria-label="Create workspace"
-            title="Create workspace"
+            type="submit"
+            className="h-12 rounded-md bg-[#0a72e8] px-4 text-sm font-bold text-white transition hover:bg-[#075fc2]"
           >
-            +
+            Add
           </button>
-        </div>
+        </form>
 
-        {isWorkspaceComposerOpen ? (
-          <form onSubmit={createWorkspace} className="mt-4 flex gap-2">
-            <input
-              value={workspaceName}
-              onChange={(event) => setWorkspaceName(event.target.value)}
-              placeholder="New workspace name"
-              className="h-11 min-w-0 flex-1 rounded-md border border-[#c4ccdc] bg-white px-3 text-sm text-[#2f3442] outline-none focus:border-[#0a72e8] focus:ring-2 focus:ring-[#0a72e8]/15"
-            />
-            <button
-              type="submit"
-              className="h-11 rounded-md bg-[#0a72e8] px-4 text-sm font-bold text-white transition hover:bg-[#075fc2]"
-            >
-              Add
-            </button>
-          </form>
-        ) : null}
-
-        <button
-          type="button"
-          className="mt-9 flex items-center gap-2 px-2 text-lg font-bold text-[#2f3442]"
-        >
-          My workspace agents
-          <span className="text-2xl font-normal text-[#626779]">›</span>
-        </button>
-
-        <div className="mt-7">
-          <p className="flex items-center gap-2 px-2 text-lg font-bold text-[#2f3442]">
-            Content <span className="text-xl font-normal text-[#626779]">⌄</span>
-          </p>
+        <div className="mt-5">
           <div className="mt-3 space-y-2">
-            <button
-              type="button"
-              className="flex h-12 w-full items-center gap-3 rounded-md px-3 text-left text-lg font-medium text-[#626779] transition hover:bg-[#eef6ff] hover:text-[#233246]"
-            >
-              <span className="text-xl">⌂</span>
-              Workspace home
-            </button>
             {workspaces.map((workspace) => {
-              const isActive = workspace.id === selectedWorkspaceId;
+              const isActive = workspace.workspace_id === selectedWorkspaceId;
 
               return (
                 <button
-                  key={workspace.id}
+                  key={workspace.workspace_id}
                   type="button"
-                  onClick={() => setSelectedWorkspaceId(workspace.id)}
+                  onClick={() => setSelectedWorkspaceId(workspace.workspace_id)}
                   className={`flex h-12 w-full items-center gap-3 rounded-md px-3 text-left text-lg font-medium transition ${
                     isActive
                       ? "bg-[#cfe7ff] text-[#233246]"
@@ -302,12 +276,17 @@ export default function TaskManagement() {
                   }`}
                 >
                   <span className="flex h-7 w-7 items-center justify-center rounded-md text-xl text-[#475467]">
-                    {workspace.id === "reporting" ? "▥" : "▣"}
+                    ▣
                   </span>
-                  <span className="min-w-0 truncate">{workspace.name}</span>
+                  <span className="min-w-0 truncate">{workspace.workspace_name}</span>
                 </button>
               );
             })}
+            {!workspaces.length ? (
+              <p className="rounded-md border border-dashed border-[#c4ccdc] px-3 py-4 text-sm text-[#667085]">
+                Create your first workspace to begin.
+              </p>
+            ) : null}
           </div>
         </div>
       </aside>
@@ -317,7 +296,7 @@ export default function TaskManagement() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-3xl font-bold text-[#2f3442]">
-                {currentWorkspace?.name ?? "Workspace"}
+                {currentWorkspace?.workspace_name ?? "Workspace"}
               </h2>
               <div className="mt-4 flex items-center gap-6 border-b border-[#d6deed] text-sm font-semibold text-[#606575]">
                 <span className="border-b-2 border-[#0a72e8] pb-3 text-[#2f3442]">
