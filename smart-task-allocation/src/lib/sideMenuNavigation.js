@@ -13,7 +13,7 @@ export const sideMenuNavigation = {
     homeHref: "/manager",
     items: [
       { label: "Home", href: "/manager", icon: "home" },
-      { label: "Tasks", href: "/manager/tasks", icon: "tasks" },
+      { label: "Workspace", href: "/manager/tasks", icon: "tasks" },
       { label: "Team", href: "/manager/team", icon: "users" },
       { label: "Settings", href: "/manager/settings", icon: "settings" },
     ],

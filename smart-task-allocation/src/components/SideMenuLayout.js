@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { sideMenuNavigation } from "@/lib/sideMenuNavigation";
+import TopInformationBar from "@/components/TopInformationBar";
 
 function NavIcon({ name }) {
   const commonProps = {
@@ -77,13 +78,14 @@ function NavIcon({ name }) {
   );
 }
 
-export default function SideMenuLayout({ actor, title, subtitle, children }) {
+export default function SideMenuLayout({ actor, children }) {
   const pathname = usePathname();
   const navigation = sideMenuNavigation[actor];
 
   return (
-    <main className="min-h-screen bg-[#E0E5E9] text-[#07183b] sm:p-6 lg:p-8">
-      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-[1600px] gap-6 rounded-[28px] bg-[#C7DDEB] p-4 shadow-[0_28px_80px_rgba(7,24,59,0.12)] sm:p-6">
+    <main className="min-h-screen bg-[#C7DDEB] text-[#07183b]">
+      <TopInformationBar actor={actor} />
+      <div className="flex min-h-[calc(100vh-3.5rem)] w-full gap-6 bg-[#C7DDEB] px-4 pb-4 pt-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8">
         <div className="hidden w-16 mt-28 shrink-0 flex-col z-10 justify-between md:flex">
           <aside className="group flex w-16 flex-col items-center rounded-[34px] bg-white/40 py-6 backdrop-blur-sm shadow-sm transition-all duration-300 hover:w-56">
             <div className="flex w-full flex-col items-center gap-8">
@@ -118,12 +120,10 @@ export default function SideMenuLayout({ actor, title, subtitle, children }) {
                 })}
               </nav>
             </div>
-
-            
           </aside>
 
           <aside className="group flex w-16 flex-col items-center rounded-full bg-white/40 backdrop-blur-sm py-2 shadow-sm transition-all duration-300">
-                <Link
+            <Link
               href="/login"
               title="Log out"
               aria-label="Log out"
@@ -147,43 +147,9 @@ export default function SideMenuLayout({ actor, title, subtitle, children }) {
           </aside>
         </div>
           
-        <section className="flex min-w-0 flex-1 flex-col">
-          <header className="flex flex-col gap-4 pb-6 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-sm font-bold uppercase tracking-wider text-[#57708f]">
-                {navigation.label}
-              </p>
-
-              <h1 className="mt-1 text-3xl font-bold text-[#07183b]">{title}</h1>
-
-              {subtitle ? <p className="mt-2 text-sm text-[#52627a]">{subtitle}</p> : null}
-            </div>
-
-            <nav
-              className="flex gap-2 overflow-x-auto rounded-2xl bg-white p-2 shadow-sm md:hidden"
-              aria-label={`${navigation.label} mobile navigation`}
-            >
-              {navigation.items.map((item) => {
-                const isActive = pathname === item.href;
-
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`flex h-10 shrink-0 items-center gap-2 rounded-xl px-3 text-sm font-bold transition-colors ${
-                      isActive ? "bg-[#0a2a66] text-white" : "text-[#07183b] hover:bg-[#eef2f8]"
-                    }`}
-                  >
-                    <NavIcon name={item.icon} />
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
-          </header>
-
-          <div className="min-w-0 flex-1">{children}</div>
-        </section>
+        <div className="min-w-0 flex-1">
+          {children}
+        </div>
       </div>
     </main>
   );
