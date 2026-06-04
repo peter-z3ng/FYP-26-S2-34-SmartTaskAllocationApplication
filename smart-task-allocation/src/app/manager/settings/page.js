@@ -6,7 +6,7 @@ export default function ManagerSettingsPage() {
     <SideMenuLayout
       actor="manager"
       title="Settings"
-      subtitle="Adjust manager workflow preferences."
+      subtitle="Adjust manager task coordination preferences."
     >
       <HomePanel
         title="Manager Settings"

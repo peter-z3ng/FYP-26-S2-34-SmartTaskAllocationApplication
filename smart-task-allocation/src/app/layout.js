@@ -12,7 +12,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Workflow+",
+  title: "Pace",
   description: "Smart task allocation application",
 };
 
