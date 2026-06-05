@@ -227,8 +227,8 @@ export default function WorkspaceManagement() {
   }
 
   return (
-    <div className="grid min-h-[720px] overflow-hidden rounded-2xl border border-[#d6deed] bg-white shadow-sm lg:grid-cols-[360px_minmax(0,1fr)]">
-      <aside className="border-b border-[#d6deed] bg-white p-6 lg:border-b-0 lg:border-r">
+    <div className="grid h-full min-h-0 overflow-hidden rounded-2xl border border-[#d6deed] bg-white shadow-sm lg:grid-cols-[360px_minmax(0,1fr)]">
+      <aside className="overflow-y-auto border-b border-[#d6deed] bg-white p-6 lg:border-b-0 lg:border-r">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-2xl font-medium text-[#626779]">Workspace</h2>
           <div className="flex items-center gap-4 text-2xl text-[#626779]">
@@ -291,8 +291,8 @@ export default function WorkspaceManagement() {
         </div>
       </aside>
 
-      <section className="min-w-0 bg-white">
-        <div className="border-b border-[#d6deed] px-6 py-5">
+      <section className="flex min-h-0 min-w-0 flex-col bg-white">
+        <div className="shrink-0 border-b border-[#d6deed] px-6 py-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-3xl font-bold text-[#2f3442]">
@@ -383,7 +383,7 @@ export default function WorkspaceManagement() {
           ) : null}
         </div>
 
-        <div className="overflow-x-auto px-6 py-6">
+        <div className="min-h-0 flex-1 overflow-auto px-6 py-6">
           <TaskGroup
             color="#579BFC"
             title="To-Do"

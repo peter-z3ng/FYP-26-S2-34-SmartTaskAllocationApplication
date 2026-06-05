@@ -94,15 +94,15 @@ export default function SideMenuLayout({ actor, children }) {
   const navigation = sideMenuNavigation[actor];
 
   return (
-    <main className="min-h-screen bg-[#C7DDEB] text-[#07183b]">
+    <main className="h-screen overflow-hidden bg-[#C7DDEB] text-[#07183b]">
       <TopInformationBar actor={actor} />
-      <div className="flex min-h-[calc(100vh-3.5rem)] w-full gap-6 bg-[#C7DDEB] px-4 pb-4 pt-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8">
-        <div className="hidden w-16 mt-28 shrink-0 flex-col z-10 justify-between md:flex">
-          <aside className="group flex w-16 flex-col items-center rounded-[34px] bg-white/40 py-6 backdrop-blur-sm shadow-sm transition-all duration-300 hover:w-56">
+      <div className="flex h-[calc(100vh-3.5rem)] w-full gap-2 overflow-hidden bg-[#C7DDEB] pl-1 pb-2 pr-2 sm:pb-2 sm:pl-2 sm:pr-2 lg:pb-2 lg:pl-2 lg:pr-2">
+        <div className="hidden w-16 shrink-0 flex-col z-10 justify-between md:flex">
+          <aside className="group flex w-16 flex-col items-center ml-0.5 rounded-[34px] bg-white/40 py-6 backdrop-blur-sm shadow-sm transition-all duration-300 hover:w-56">
             <div className="flex w-full flex-col items-center gap-8">
 
               <nav
-                className="flex w-full flex-col gap-3 px-2"
+                className="flex w-full flex-col gap-6 px-2"
                 aria-label={`${navigation.label} navigation`}
               >
                 {navigation.items.map((item) => {
@@ -158,7 +158,7 @@ export default function SideMenuLayout({ actor, children }) {
           </aside>
         </div>
           
-        <div className="min-w-0 flex-1">
+        <div className="min-h-0 min-w-0 flex-1">
           {children}
         </div>
       </div>
