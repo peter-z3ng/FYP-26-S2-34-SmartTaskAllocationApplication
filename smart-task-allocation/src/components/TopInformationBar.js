@@ -1,18 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabaseClient";
 import { sideMenuNavigation } from "@/lib/sideMenuNavigation";
 
-const platformActions = [
-  { label: "Create workspace", href: "/manager/workspace", group: "Action" },
-  { label: "Create workspace item", href: "/manager/workspace", group: "Action" },
-  { label: "Invite user", href: "/useradmin/accounts", group: "Action" },
-  { label: "Organization profile", href: "/useradmin/organization", group: "Action" },
-  { label: "Availability schedule", href: "/employee/availability", group: "Action" },
-];
+const roleActions = {
+  manager: [
+    { label: "Create workspace", href: "/manager/workspace", group: "Workspace" },
+    { label: "Create workspace item", href: "/manager/workspace", group: "Workspace" },
+    { label: "Review team capacity", href: "/manager/team", group: "Team" },
+    { label: "Adjust workspace preferences", href: "/manager/settings", group: "Settings" },
+  ],
+  useradmin: [
+    { label: "Create account", href: "/useradmin/accounts", group: "Accounts" },
+    { label: "Invite user", href: "/useradmin/accounts", group: "Accounts" },
+    { label: "Update organization profile", href: "/useradmin/organization", group: "Organization" },
+    { label: "Review roles", href: "/useradmin/roles", group: "Roles" },
+  ],
+  employee: [
+    { label: "View assigned tasks", href: "/employee/tasks", group: "My Tasks" },
+    { label: "Update availability", href: "/employee/availability", group: "Availability" },
+    { label: "Manage profile settings", href: "/employee/settings", group: "Settings" },
+  ],
+};
 
 const notificationItems = [
   {
@@ -65,36 +77,42 @@ function UserIcon() {
 
 export default function TopInformationBar({ actor }) {
   const router = useRouter();
+  const searchInputRef = useRef(null);
   const [query, setQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [profile, setProfile] = useState({ email: "", name: "" });
   const [now, setNow] = useState(() => new Date());
 
   const searchItems = useMemo(() => {
-    const navigationItems = Object.values(sideMenuNavigation).flatMap((section) =>
-      section.items.map((item) => ({
+    const navigationItems =
+      sideMenuNavigation[actor]?.items.map((item) => ({
         label: item.label,
         href: item.href,
-        group: section.label,
-      }))
-    );
+        group: sideMenuNavigation[actor].label,
+        type: "Page",
+      })) ?? [];
+    const actionItems = (roleActions[actor] ?? []).map((item) => ({
+      ...item,
+      type: "Action",
+    }));
 
-    return [...navigationItems, ...platformActions];
-  }, []);
+    return [...actionItems, ...navigationItems];
+  }, [actor]);
 
   const searchResults = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
     if (!normalizedQuery) {
-      return [];
+      return searchItems;
     }
 
     return searchItems
       .filter((item) =>
         `${item.group} ${item.label} ${item.href}`.toLowerCase().includes(normalizedQuery)
       )
-      .slice(0, 7);
+      .slice(0, 8);
   }, [query, searchItems]);
 
   useEffect(() => {
@@ -102,6 +120,14 @@ export default function TopInformationBar({ actor }) {
 
     return () => window.clearInterval(intervalId);
   }, []);
+
+  useEffect(() => {
+    if (!isSearchOpen) {
+      return;
+    }
+
+    searchInputRef.current?.focus();
+  }, [isSearchOpen]);
 
   async function loadProfile() {
     const supabase = getSupabaseBrowserClient();
@@ -148,29 +174,18 @@ export default function TopInformationBar({ actor }) {
         <span className="absolute left-3 top-1/2 z-10 -translate-y-1/2 text-[#61708a]">
           <SearchIcon />
         </span>
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search..."
-          className="absolute inset-0 h-full w-full rounded-full border border-transparent bg-[#e8ebf1] pl-10 pr-4 text-sm font-medium text-[#07183b] outline-none placeholder:text-[#61708a] focus:border-[#b8c4d8] focus:bg-white"
-          aria-label="Search across Pace"
-        />
-
-        {searchResults.length ? (
-          <div className="absolute left-0 top-12 w-full overflow-hidden rounded-xl border border-[#d8e0ee] bg-white shadow-[0_18px_60px_rgba(7,24,59,0.16)]">
-            {searchResults.map((item) => (
-              <Link
-                key={`${item.group}-${item.href}-${item.label}`}
-                href={item.href}
-                onClick={() => setQuery("")}
-                className="flex items-center justify-between gap-3 border-b border-[#eef2f8] px-4 py-3 text-sm last:border-b-0 hover:bg-[#f4f7fb]"
-              >
-                <span className="font-bold text-[#07183b]">{item.label}</span>
-                <span className="text-xs font-semibold text-[#61708a]">{item.group}</span>
-              </Link>
-            ))}
-          </div>
-        ) : null}
+        <button
+          type="button"
+          onClick={() => {
+            setIsSearchOpen(true);
+            setIsNotificationsOpen(false);
+            setIsProfileOpen(false);
+          }}
+          className="absolute inset-0 h-full w-full rounded-full border border-transparent bg-[#e8ebf1] pl-10 pr-4 text-left text-sm font-medium text-[#61708a] outline-none transition hover:bg-white/80 focus:border-[#b8c4d8] focus:bg-white"
+          aria-label="Open global search"
+        >
+          Search...
+        </button>
       </div>
 
       <div className="min-w-0 flex-1" />
@@ -248,6 +263,81 @@ export default function TopInformationBar({ actor }) {
           ) : null}
         </div>
       </div>
+
+      {isSearchOpen ? (
+        <div className="fixed inset-0 z-50 bg-black/35 px-4 py-10 backdrop-blur-sm">
+          <div className="mx-auto w-full max-w-4xl overflow-hidden rounded-2xl border border-white/10 bg-[#151719] text-white shadow-[0_28px_90px_rgba(0,0,0,0.45)]">
+            <div className="flex items-center gap-4 border-b border-white/10 px-6 py-5">
+              <span className="text-white/65">
+                <SearchIcon />
+              </span>
+              <input
+                ref={searchInputRef}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    setIsSearchOpen(false);
+                    setQuery("");
+                  }
+                }}
+                placeholder="Search for apps and commands..."
+                className="h-6 min-w-0 flex-1 bg-transparent text-xl font-semibold text-white outline-none placeholder:text-white/45"
+                aria-label="Search for apps and commands"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSearchOpen(false);
+                  setQuery("");
+                }}
+                className="rounded-md border border-white/15 px-3 py-2 text-sm font-bold text-white/70 hover:bg-white/10"
+              >
+                Esc
+              </button>
+            </div>
+
+            <div className="max-h-[60vh] overflow-y-auto px-4 py-4">
+              <p className="px-3 py-2 text-sm font-bold text-white/55">
+                Actions and pages
+              </p>
+              <div className="space-y-1">
+                {searchResults.map((item) => (
+                  <Link
+                    key={`${item.type}-${item.group}-${item.href}-${item.label}`}
+                    href={item.href}
+                    onClick={() => {
+                      setIsSearchOpen(false);
+                      setQuery("");
+                    }}
+                    className="flex items-center justify-between gap-4 rounded-lg px-3 py-3 text-left hover:bg-white/10"
+                  >
+                    <span className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-sm font-black">
+                        {item.label.charAt(0)}
+                      </span>
+                      <span className="truncate text-sm font-bold">{item.label}</span>
+                    </span>
+                    <span className="shrink-0 text-sm font-semibold text-white/55">
+                      {item.group}
+                    </span>
+                  </Link>
+                ))}
+                {!searchResults.length ? (
+                  <p className="rounded-lg px-3 py-8 text-center text-sm font-semibold text-white/45">
+                    No matching actions or pages for this account.
+                  </p>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between border-t border-white/10 bg-white/5 px-6 py-3 text-sm font-bold text-white/55">
+              <span>{sideMenuNavigation[actor]?.label} search only</span>
+              <span>Open result</span>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
