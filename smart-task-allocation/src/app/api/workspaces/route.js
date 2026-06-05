@@ -27,6 +27,30 @@ async function getAccountUserId(supabase, user) {
   return byEmail.data?.user_id ?? user.id;
 }
 
+async function attachCreatorProfiles(supabase, workspaces) {
+  const creatorIds = [...new Set(workspaces.map((workspace) => workspace.created_by).filter(Boolean))];
+
+  if (!creatorIds.length) {
+    return workspaces;
+  }
+
+  const { data } = await supabase
+    .from("user_account")
+    .select("user_id, username, email")
+    .in("user_id", creatorIds);
+  const creatorsById = new Map((data ?? []).map((account) => [account.user_id, account]));
+
+  return workspaces.map((workspace) => {
+    const creator = creatorsById.get(workspace.created_by);
+
+    return {
+      ...workspace,
+      created_by_name: creator?.username ?? creator?.email ?? "Unknown user",
+      created_by_email: creator?.email ?? "",
+    };
+  });
+}
+
 export async function GET(request) {
   try {
     const supabase = getSupabaseAdminClient();
@@ -39,7 +63,7 @@ export async function GET(request) {
     const accountUserId = await getAccountUserId(supabase, user);
     const { data, error } = await supabase
       .from("workspace")
-      .select("workspace_id, workspace_name, description, status, visibility, created_at")
+      .select("workspace_id, workspace_name, description, created_by, status, visibility, created_at")
       .eq("created_by", accountUserId)
       .order("created_at", { ascending: true });
 
@@ -47,7 +71,7 @@ export async function GET(request) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json({ workspaces: data ?? [] });
+    return NextResponse.json({ workspaces: await attachCreatorProfiles(supabase, data ?? []) });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -102,11 +126,54 @@ export async function POST(request) {
         workspace_id: workspaceId,
         workspace_name: cleanedName,
         description: cleanString(description) || null,
+        created_by: accountUserId,
+        created_by_name: user.email ?? "Current user",
+        created_by_email: user.email ?? "",
         status: "Active",
         visibility: "Private",
         created_at: now,
       },
     });
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function PATCH(request) {
+  try {
+    const supabase = getSupabaseAdminClient();
+    const { user, error: authError } = await requireManager(request, supabase);
+
+    if (authError) {
+      return NextResponse.json({ error: authError }, { status: 403 });
+    }
+
+    const { workspaceId, workspaceName } = await request.json();
+    const cleanedName = cleanString(workspaceName);
+
+    if (!workspaceId) {
+      return NextResponse.json({ error: "Workspace ID is required." }, { status: 400 });
+    }
+
+    if (!cleanedName) {
+      return NextResponse.json({ error: "Workspace name is required." }, { status: 400 });
+    }
+
+    const accountUserId = await getAccountUserId(supabase, user);
+    const { error } = await supabase
+      .from("workspace")
+      .update({
+        workspace_name: cleanedName,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("workspace_id", workspaceId)
+      .eq("created_by", accountUserId);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

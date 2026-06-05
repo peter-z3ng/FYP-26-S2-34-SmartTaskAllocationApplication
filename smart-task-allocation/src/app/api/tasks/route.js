@@ -36,10 +36,16 @@ export async function GET(request) {
     }
 
     const organizationId = await getManagerOrganizationId(supabase, user);
+    const { searchParams } = new URL(request.url);
+    const workspaceId = searchParams.get("workspaceId");
     let query = supabase.from("task").select("*").order("created_at", { ascending: false });
 
     if (organizationId) {
       query = query.eq("organization_id", organizationId);
+    }
+
+    if (workspaceId) {
+      query = query.eq("workspace_id", workspaceId);
     }
 
     const { data, error } = await query;
@@ -70,18 +76,32 @@ export async function POST(request) {
     }
 
     const organizationId = await getManagerOrganizationId(supabase, user);
-    const { title, description, status, startDatetime, endDatetime } = await request.json();
+    const {
+      workspaceId,
+      title,
+      description,
+      status,
+      priority,
+      startDatetime,
+      endDatetime,
+    } = await request.json();
 
     if (!cleanString(title)) {
       return NextResponse.json({ error: "Task title is required." }, { status: 400 });
     }
 
+    if (!workspaceId) {
+      return NextResponse.json({ error: "Workspace ID is required." }, { status: 400 });
+    }
+
     const { error } = await supabase.from("task").insert({
       organization_id: organizationId,
-      task_code: `TASK-${Date.now()}`,
+      workspace_id: workspaceId,
       title: cleanString(title),
       description: cleanString(description) || null,
+      owner_id: user.id,
       status: cleanString(status) || "Open",
+      priority: cleanString(priority) || "Medium",
       start_datetime: startDatetime || null,
       end_datetime: endDatetime || null,
       created_at: new Date().toISOString(),
@@ -107,7 +127,7 @@ export async function PATCH(request) {
       return NextResponse.json({ error: authError }, { status: 403 });
     }
 
-    const { taskId, title, description, status, startDatetime, endDatetime } =
+    const { taskId, title, description, status, priority, startDatetime, endDatetime } =
       await request.json();
     const { error } = await supabase
       .from("task")
@@ -115,6 +135,7 @@ export async function PATCH(request) {
         title: cleanString(title),
         description: cleanString(description) || null,
         status: cleanString(status) || "Open",
+        priority: cleanString(priority) || "Medium",
         start_datetime: startDatetime || null,
         end_datetime: endDatetime || null,
         updated_at: new Date().toISOString(),
