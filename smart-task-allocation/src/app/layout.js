@@ -12,7 +12,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Pace",
+  title: "Optima",
   description: "Smart task allocation application",
 };
 

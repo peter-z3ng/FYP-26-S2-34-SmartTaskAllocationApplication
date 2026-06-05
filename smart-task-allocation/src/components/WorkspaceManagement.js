@@ -228,20 +228,9 @@ export default function WorkspaceManagement() {
 
   return (
     <div className="grid h-full min-h-0 overflow-hidden rounded-2xl border border-[#d6deed] bg-white shadow-sm lg:grid-cols-[360px_minmax(0,1fr)]">
-      <aside className="overflow-y-auto border-b border-[#d6deed] bg-white p-6 lg:border-b-0 lg:border-r">
+      <aside className="overflow-y-auto border-b border-[#d6deed] bg-[#BBE1FA] p-6 lg:border-b-0 lg:border-r">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-2xl font-medium text-[#626779]">Workspace</h2>
-          <div className="flex items-center gap-4 text-2xl text-[#626779]">
-            <button type="button" aria-label="Workspace options" title="Options">
-              ...
-            </button>
-            <button type="button" aria-label="Search workspaces" title="Search">
-              ⌕
-            </button>
-            <button type="button" aria-label="Collapse workspace menu" title="Collapse">
-              ≪
-            </button>
-          </div>
         </div>
 
         <form onSubmit={createWorkspace} className="mt-6 flex gap-2">

@@ -28,10 +28,10 @@ export default function Home() {
         <header className="relative z-40 mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
           <Link href="/" className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-sm font-black backdrop-blur-md">
-              P
+              O
             </div>
 
-            <span className="text-lg font-bold tracking-wide">Pace</span>
+            <span className="text-lg font-bold tracking-wide">Optima</span>
           </Link>
 
           <nav className="hidden items-center gap-8 text-sm font-medium text-white/85 md:flex">
@@ -72,7 +72,7 @@ export default function Home() {
               : "top-32 text-6xl md:text-[9rem]"
           }`}
         >
-          Pace
+          Optima
         </h1>
 
         {/* Hero Content */}
@@ -172,12 +172,12 @@ export default function Home() {
           <SectionTitle
             label="Testimonials"
             title="Trusted by growing SMEs"
-            text="Teams use Pace to reduce manual workload and improve operational efficiency."
+            text="Teams use Optima to reduce manual workload and improve operational efficiency."
           />
 
           <div className="grid gap-6 md:grid-cols-3">
             <TestimonialCard
-              quote="Pace reduced our manual scheduling work significantly."
+              quote="Optima reduced our manual scheduling work significantly."
               name="Alicia Tan"
               role="Operations Manager"
             />
@@ -214,7 +214,7 @@ export default function Home() {
               </h2>
 
               <p className="mt-5 max-w-2xl text-[#52627a]">
-                Pace is introducing intelligent recommendations to improve task
+                Optima is introducing intelligent recommendations to improve task
                 allocation accuracy and workforce productivity.
               </p>
             </div>
@@ -281,7 +281,7 @@ export default function Home() {
       >
         <div className="mx-auto max-w-5xl text-center">
           <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#4668C8]">
-            About Pace
+            About Optima
           </p>
 
           <h2 className="mt-4 text-4xl font-light md:text-5xl">
@@ -289,7 +289,7 @@ export default function Home() {
           </h2>
 
           <p className="mx-auto mt-8 max-w-3xl text-lg leading-8 text-[#52627a]">
-            Pace is a smart task allocation platform designed for SMEs to
+            Optima is a smart task allocation platform designed for SMEs to
             simplify workforce operations, improve scheduling efficiency, and
             automate manual task assignment.
           </p>
