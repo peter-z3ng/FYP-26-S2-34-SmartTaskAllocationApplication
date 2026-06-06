@@ -80,6 +80,7 @@ export async function POST(request) {
       workspaceId,
       title,
       description,
+      assignedTo,
       status,
       priority,
       startDatetime,
@@ -100,6 +101,7 @@ export async function POST(request) {
       title: cleanString(title),
       description: cleanString(description) || null,
       owner_id: user.id,
+      assigned_to: assignedTo || null,
       status: cleanString(status) || "Open",
       priority: cleanString(priority) || "Medium",
       start_datetime: startDatetime || null,
@@ -127,13 +129,14 @@ export async function PATCH(request) {
       return NextResponse.json({ error: authError }, { status: 403 });
     }
 
-    const { taskId, title, description, status, priority, startDatetime, endDatetime } =
+    const { taskId, title, description, assignedTo, status, priority, startDatetime, endDatetime } =
       await request.json();
     const { error } = await supabase
       .from("task")
       .update({
         title: cleanString(title),
         description: cleanString(description) || null,
+        assigned_to: assignedTo || null,
         status: cleanString(status) || "Open",
         priority: cleanString(priority) || "Medium",
         start_datetime: startDatetime || null,

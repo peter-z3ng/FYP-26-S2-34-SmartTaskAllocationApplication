@@ -9,6 +9,7 @@ const emptyTask = {
   description: "",
   status: "Open",
   priority: "Medium",
+  assignedTo: "",
   startDatetime: "",
   endDatetime: "",
 };
@@ -35,9 +36,10 @@ const statusStyles = {
 
 export default function WorkspaceManagement() {
   const [tasks, setTasks] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [form, setForm] = useState(emptyTask);
   const [error, setError] = useState("");
-  const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [isAddingTask, setIsAddingTask] = useState(false);
   const [workspaces, setWorkspaces] = useState([]);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [workspaceName, setWorkspaceName] = useState("");
@@ -98,9 +100,25 @@ export default function WorkspaceManagement() {
     }
   }
 
+  async function loadEmployees() {
+    try {
+      const response = await fetch("/api/employees", { headers: await authHeaders() });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Could not load employees.");
+      }
+
+      setEmployees(result.employees ?? []);
+    } catch (loadError) {
+      setError(loadError.message);
+    }
+  }
+
   useEffect(() => {
     const timeout = setTimeout(() => {
       loadWorkspaces();
+      loadEmployees();
     }, 0);
 
     return () => clearTimeout(timeout);
@@ -228,17 +246,27 @@ export default function WorkspaceManagement() {
       }
 
       setForm(emptyTask);
-      setIsComposerOpen(false);
+      setIsAddingTask(false);
       await loadTasks();
     } catch (saveError) {
       setError(saveError.message);
     }
   }
 
-  async function updateTaskStatus(task, status) {
+  async function updateTask(task, changes) {
     setError("");
 
     try {
+      const nextTask = {
+        title: task.title ?? "",
+        description: task.description ?? "",
+        status: task.status ?? "Open",
+        priority: task.priority ?? "Medium",
+        assignedTo: task.assigned_to ?? "",
+        startDatetime: task.start_datetime ?? "",
+        endDatetime: task.end_datetime ?? "",
+        ...changes,
+      };
       const response = await fetch("/api/tasks", {
         method: "PATCH",
         headers: {
@@ -247,42 +275,28 @@ export default function WorkspaceManagement() {
         },
         body: JSON.stringify({
           taskId: task.task_id,
-          title: task.title ?? "",
-          description: task.description ?? "",
-          status,
-          priority: task.priority ?? "Medium",
-          startDatetime: task.start_datetime ?? "",
-          endDatetime: task.end_datetime ?? "",
+          ...nextTask,
         }),
       });
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || "Could not update task status.");
+        throw new Error(result.error || "Could not update task.");
       }
 
       await loadTasks();
-    } catch (statusError) {
-      setError(statusError.message);
+    } catch (updateError) {
+      setError(updateError.message);
     }
   }
 
-  function editTask(task) {
-    setForm({
-      taskId: task.task_id,
-      title: task.title ?? "",
-      description: task.description ?? "",
-      status: task.status ?? "Open",
-      priority: task.priority ?? "Medium",
-      startDatetime: task.start_datetime ? task.start_datetime.slice(0, 16) : "",
-      endDatetime: task.end_datetime ? task.end_datetime.slice(0, 16) : "",
-    });
-    setIsComposerOpen(true);
+  async function updateTaskStatus(task, status) {
+    await updateTask(task, { status });
   }
 
   function startNewTask() {
     setForm(emptyTask);
-    setIsComposerOpen((current) => !current);
+    setIsAddingTask(true);
   }
 
   function addColumn(event) {
@@ -359,62 +373,6 @@ export default function WorkspaceManagement() {
             {currentWorkspace ? <span className="text-xl text-[#667085]">⌄</span> : null}
           </button>
 
-          {isComposerOpen ? (
-            <form
-              onSubmit={saveTask}
-              className="mt-5 grid gap-3 rounded-lg border border-[#d8e0ee] bg-[#fbfcff] p-4 lg:grid-cols-[1fr_150px_150px_190px_190px_auto]"
-            >
-              <input
-                value={form.title}
-                onChange={(event) => updateField("title", event.target.value)}
-                placeholder="Task title"
-                required
-                className="h-11 rounded-md border border-[#c4ccdc] bg-white px-3 text-sm outline-none"
-              />
-              <select
-                value={form.status}
-                onChange={(event) => updateField("status", event.target.value)}
-                className="h-11 rounded-md border border-[#c4ccdc] bg-white px-3 text-sm outline-none"
-              >
-                <option>Open</option>
-                <option>In Progress</option>
-                <option>Completed</option>
-                <option>Cancelled</option>
-              </select>
-              <select
-                value={form.priority}
-                onChange={(event) => updateField("priority", event.target.value)}
-                className="h-11 rounded-md border border-[#c4ccdc] bg-white px-3 text-sm outline-none"
-              >
-                <option>Low</option>
-                <option>Medium</option>
-                <option>High</option>
-                <option>Urgent</option>
-              </select>
-              <input
-                type="datetime-local"
-                value={form.startDatetime}
-                onChange={(event) => updateField("startDatetime", event.target.value)}
-                className="h-11 rounded-md border border-[#c4ccdc] bg-white px-3 text-sm outline-none"
-              />
-              <input
-                type="datetime-local"
-                value={form.endDatetime}
-                onChange={(event) => updateField("endDatetime", event.target.value)}
-                className="h-11 rounded-md border border-[#c4ccdc] bg-white px-3 text-sm outline-none"
-              />
-              <button className="h-11 rounded-md bg-[#07183b] px-5 text-sm font-bold text-white">
-                {form.taskId ? "Update" : "Create"}
-              </button>
-              <textarea
-                value={form.description}
-                onChange={(event) => updateField("description", event.target.value)}
-                placeholder="Description"
-                className="min-h-20 rounded-md border border-[#c4ccdc] bg-white px-3 py-2 text-sm outline-none lg:col-span-6"
-              />
-            </form>
-          ) : null}
-
           {error ? (
             <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
               {error}
@@ -428,12 +386,22 @@ export default function WorkspaceManagement() {
               color="#579BFC"
               title="To-Do"
               columns={columns}
+              employees={employees}
               tasks={todoTasks}
               emptyText="Blank workspace ready. Add your first task."
+              isAddingTask={isAddingTask}
+              form={form}
               newColumnName={newColumnName}
+              onUpdateField={updateField}
               onNewColumnNameChange={setNewColumnName}
+              onSaveTask={saveTask}
+              onCancelTask={() => {
+                setForm(emptyTask);
+                setIsAddingTask(false);
+              }}
               onAddColumn={addColumn}
               onAddTask={startNewTask}
+              onTaskUpdate={updateTask}
               onStatusChange={updateTaskStatus}
             />
           ) : (
@@ -520,12 +488,19 @@ function TaskGroup({
   color,
   title,
   columns,
+  employees,
   tasks,
   emptyText,
+  isAddingTask,
+  form,
   newColumnName,
+  onUpdateField,
   onNewColumnNameChange,
+  onSaveTask,
+  onCancelTask,
   onAddColumn,
   onAddTask,
+  onTaskUpdate,
   onStatusChange,
 }) {
   const gridTemplateColumns = `44px ${columns
@@ -539,7 +514,7 @@ function TaskGroup({
         {title}
       </h3>
 
-      <div className="overflow-hidden rounded-lg border border-[#d6deed] bg-white shadow-sm">
+      <div className="overflow-visible rounded-lg border border-[#d6deed] bg-white shadow-sm">
         <div
           className="grid border-l-8 text-sm font-bold text-[#2f3442]"
           style={{ borderLeftColor: color, gridTemplateColumns }}
@@ -561,11 +536,13 @@ function TaskGroup({
               task={task}
               color={color}
               columns={columns}
+              employees={employees}
               gridTemplateColumns={gridTemplateColumns}
+              onTaskUpdate={onTaskUpdate}
               onStatusChange={onStatusChange}
             />
           ))
-        ) : (
+        ) : !isAddingTask ? (
           <div
             className="grid border-l-8 border-t border-[#d6deed] text-sm text-[#667085]"
             style={{ borderLeftColor: color, gridTemplateColumns }}
@@ -575,7 +552,20 @@ function TaskGroup({
               {emptyText}
             </div>
           </div>
-        )}
+        ) : null}
+
+        {isAddingTask ? (
+          <InlineTaskFormRow
+            color={color}
+            columns={columns}
+            employees={employees}
+            form={form}
+            gridTemplateColumns={gridTemplateColumns}
+            onCancel={onCancelTask}
+            onSave={onSaveTask}
+            onUpdateField={onUpdateField}
+          />
+        ) : null}
 
         <div
           className="grid border-l-8 border-t border-[#d6deed] text-sm text-[#667085]"
@@ -587,7 +577,7 @@ function TaskGroup({
           <button
             type="button"
             onClick={onAddTask}
-            className="p-3 text-left hover:bg-[#f8faff]"
+            className="p-3 text-left hover:bg-[#f8faff] focus:bg-[#e8f3ff] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#07183b]"
             style={{ gridColumn: `span ${columns.length}` }}
           >
             + Add task
@@ -610,7 +600,157 @@ function TaskGroup({
   );
 }
 
-function TaskRow({ task, color, columns, gridTemplateColumns, onStatusChange }) {
+function InlineTaskFormRow({
+  color,
+  columns,
+  employees,
+  form,
+  gridTemplateColumns,
+  onCancel,
+  onSave,
+  onUpdateField,
+}) {
+  return (
+    <form
+      onSubmit={onSave}
+      className="grid border-l-8 border-t border-[#d6deed] bg-[#e8f3ff] text-sm text-[#2f3442]"
+      style={{ borderLeftColor: color, gridTemplateColumns }}
+    >
+      <div className="border-r border-[#d6deed] bg-white p-3">
+        <span className="block h-5 w-5 rounded border border-[#b8c4d8]" />
+      </div>
+      {columns.map((column) => (
+        <InlineTaskCell
+          key={column}
+          column={column}
+          employees={employees}
+          form={form}
+          onCancel={onCancel}
+          onUpdateField={onUpdateField}
+        />
+      ))}
+    </form>
+  );
+}
+
+function InlineTaskCell({ column, employees, form, onCancel, onUpdateField }) {
+  if (column === "Task") {
+    return (
+      <div className="border-r border-[#d6deed] bg-white p-2">
+        <input
+          value={form.title}
+          onChange={(event) => onUpdateField("title", event.target.value)}
+          placeholder="New task"
+          required
+          autoFocus
+          className="h-10 w-full rounded-md border border-transparent bg-white px-2 text-sm font-semibold outline-none focus:border-[#07183b]"
+        />
+      </div>
+    );
+  }
+
+  if (column === "Status") {
+    return (
+      <div className="border-r border-[#d6deed] bg-white p-2">
+        <select
+          value={form.status}
+          onChange={(event) => onUpdateField("status", event.target.value)}
+          className={`h-10 w-full rounded-md border-0 px-2 text-center text-sm font-bold outline-none ${statusStyles[form.status] ?? statusStyles.Open}`}
+        >
+          <option>Open</option>
+          <option>In Progress</option>
+          <option>Completed</option>
+          <option>Cancelled</option>
+        </select>
+      </div>
+    );
+  }
+
+  if (column === "Assigned to") {
+    return (
+      <PeoplePickerCell
+        employees={employees}
+        selectedUserId={form.assignedTo}
+        onAssign={(userId) => onUpdateField("assignedTo", userId ?? "")}
+      />
+    );
+  }
+
+  if (column === "Priority") {
+    return (
+      <div className="border-r border-[#d6deed] bg-white p-2">
+        <select
+          value={form.priority}
+          onChange={(event) => onUpdateField("priority", event.target.value)}
+          className="h-10 w-full rounded-md border border-[#c4ccdc] bg-white px-2 text-sm font-semibold text-[#2f3442] outline-none"
+        >
+          <option>Low</option>
+          <option>Medium</option>
+          <option>High</option>
+          <option>Urgent</option>
+        </select>
+      </div>
+    );
+  }
+
+  if (column === "Due Date") {
+    return (
+      <div className="border-r border-[#d6deed] bg-white p-2">
+        <input
+          type="datetime-local"
+          value={form.endDatetime}
+          onChange={(event) => onUpdateField("endDatetime", event.target.value)}
+          className="h-10 w-full rounded-md border border-[#c4ccdc] bg-white px-2 text-sm text-[#2f3442] outline-none"
+        />
+      </div>
+    );
+  }
+
+  if (column === "Timeline") {
+    return (
+      <div className="border-r border-[#d6deed] bg-white p-2">
+        <input
+          type="datetime-local"
+          value={form.startDatetime}
+          onChange={(event) => onUpdateField("startDatetime", event.target.value)}
+          className="h-10 w-full rounded-md border border-[#c4ccdc] bg-white px-2 text-sm text-[#2f3442] outline-none"
+        />
+      </div>
+    );
+  }
+
+  if (column === "Last updated") {
+    return (
+      <div className="flex items-center gap-2 border-r border-[#d6deed] bg-white p-2">
+        <button
+          type="submit"
+          className="h-9 rounded-md bg-[#07183b] px-3 text-xs font-bold text-white transition hover:bg-[#0D1E4C]"
+        >
+          Create
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="h-9 rounded-md border border-[#c4ccdc] px-3 text-xs font-bold text-[#667085] transition hover:bg-[#eef6ff]"
+        >
+          Cancel
+        </button>
+      </div>
+    );
+  }
+
+  return <TableText value="-" />;
+}
+
+function TaskRow({
+  task,
+  color,
+  columns,
+  employees,
+  gridTemplateColumns,
+  onTaskUpdate,
+  onStatusChange,
+}) {
   const status = task.status || "Open";
 
   return (
@@ -622,21 +762,35 @@ function TaskRow({ task, color, columns, gridTemplateColumns, onStatusChange }) 
         <span className="block h-5 w-5 rounded border border-[#b8c4d8]" />
       </div>
       {columns.map((column) => (
-        <TaskCell key={column} column={column} task={task} status={status} onStatusChange={onStatusChange} />
+        <TaskCell
+          key={column}
+          column={column}
+          employees={employees}
+          task={task}
+          status={status}
+          onStatusChange={onStatusChange}
+          onTaskUpdate={onTaskUpdate}
+        />
       ))}
     </div>
   );
 }
 
-function TaskCell({ column, task, status, onStatusChange }) {
+function TaskCell({
+  column,
+  employees,
+  task,
+  status,
+  onStatusChange,
+  onTaskUpdate,
+}) {
   if (column === "Task") {
     return (
-      <div className="border-r border-[#d6deed] p-3">
-        <p className="font-semibold">{task.title}</p>
-        {task.description ? (
-          <p className="mt-1 line-clamp-1 text-xs text-[#667085]">{task.description}</p>
-        ) : null}
-      </div>
+      <EditableTextCell
+        value={task.title ?? ""}
+        description={task.description}
+        onSave={(value) => onTaskUpdate(task, { title: value })}
+      />
     );
   }
 
@@ -659,12 +813,50 @@ function TaskCell({ column, task, status, onStatusChange }) {
 
   const values = {
     Owner: task.owner_id ? "Owner" : "-",
-    "Assigned to": task.assigned_to ? "Assigned" : "-",
-    Priority: task.priority ?? "Medium",
-    "Due Date": formatDate(task.end_datetime),
-    Timeline: formatTimeline(task.start_datetime, task.end_datetime),
     "Last updated": formatDate(task.updated_at),
   };
+
+  if (column === "Assigned to") {
+    return (
+      <PeoplePickerCell
+        employees={employees}
+        selectedUserId={task.assigned_to}
+        onAssign={(userId) => onTaskUpdate(task, { assignedTo: userId ?? "" })}
+      />
+    );
+  }
+
+  if (column === "Priority") {
+    return (
+      <EditableSelectCell
+        value={task.priority ?? "Medium"}
+        options={["Low", "Medium", "High", "Urgent"]}
+        onSave={(value) => onTaskUpdate(task, { priority: value })}
+      />
+    );
+  }
+
+  if (column === "Due Date") {
+    return (
+      <EditableDateTimeCell
+        value={task.end_datetime}
+        displayValue={formatDate(task.end_datetime)}
+        onSave={(value) => onTaskUpdate(task, { endDatetime: value })}
+      />
+    );
+  }
+
+  if (column === "Timeline") {
+    return (
+      <EditableTimelineCell
+        start={task.start_datetime}
+        end={task.end_datetime}
+        onSave={(startDatetime, endDatetime) =>
+          onTaskUpdate(task, { startDatetime, endDatetime })
+        }
+      />
+    );
+  }
 
   if (column === "Comments") {
     return <TableText value="Open comments" />;
@@ -685,6 +877,283 @@ function TableText({ value }) {
   );
 }
 
+function PeoplePickerCell({ employees, selectedUserId, onAssign }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const selectedEmployee = employees.find((employee) => employee.user_id === selectedUserId);
+  const filteredEmployees = employees.filter((employee) => {
+    const searchText = `${employee.username ?? ""} ${employee.email ?? ""}`.toLowerCase();
+    return searchText.includes(query.trim().toLowerCase());
+  });
+
+  function closePicker() {
+    setQuery("");
+    setIsOpen(false);
+  }
+
+  return (
+    <div className="relative border-r border-[#d6deed] p-2">
+      <button
+        type="button"
+        onClick={() => setIsOpen((current) => !current)}
+        className="flex h-10 w-full items-center justify-center gap-2 rounded-md text-sm font-semibold text-[#667085] transition hover:bg-[#f8faff] focus:outline-none focus:ring-2 focus:ring-[#07183b]"
+        title="Assign employee"
+      >
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#eef6ff] text-xs font-bold text-[#07183b]">
+          {selectedEmployee ? getInitials(selectedEmployee) : "+"}
+        </span>
+        <span className="min-w-0 truncate">
+          {selectedEmployee ? getDisplayName(selectedEmployee) : "Assign"}
+        </span>
+      </button>
+
+      {isOpen ? (
+        <div className="absolute left-2 top-12 z-30 w-80 rounded-xl border border-[#d6deed] bg-white p-3 shadow-[0_18px_50px_rgba(7,24,59,0.18)]">
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search or enter email..."
+            autoFocus
+            className="h-11 w-full rounded-md border border-[#c4ccdc] px-3 text-sm text-[#2f3442] outline-none focus:border-[#07183b]"
+          />
+          <p className="mt-4 px-1 text-xs font-bold uppercase tracking-wide text-[#667085]">
+            People
+          </p>
+          <div className="mt-2 max-h-64 overflow-y-auto">
+            {selectedEmployee ? (
+              <button
+                type="button"
+                onClick={() => {
+                  onAssign("");
+                  closePicker();
+                }}
+                className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm font-semibold text-[#667085] hover:bg-[#f8faff]"
+              >
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#eef2f8] text-xs">
+                  -
+                </span>
+                Clear assignment
+              </button>
+            ) : null}
+            {filteredEmployees.map((employee) => (
+              <button
+                key={employee.user_id}
+                type="button"
+                onClick={() => {
+                  onAssign(employee.user_id);
+                  closePicker();
+                }}
+                className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left hover:bg-[#f8faff]"
+              >
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#07183b] text-xs font-bold text-white">
+                  {getInitials(employee)}
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-semibold text-[#2f3442]">
+                    {getDisplayName(employee)}
+                  </span>
+                  <span className="block truncate text-xs text-[#667085]">{employee.email}</span>
+                </span>
+              </button>
+            ))}
+            {!filteredEmployees.length ? (
+              <p className="px-2 py-4 text-sm text-[#667085]">No employees found.</p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function EditableTextCell({ value, description, onSave }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+
+  async function saveDraft() {
+    const nextValue = draft.trim();
+
+    if (!nextValue || nextValue === value) {
+      setDraft(value);
+      setIsEditing(false);
+      return;
+    }
+
+    await onSave(nextValue);
+    setIsEditing(false);
+  }
+
+  if (isEditing) {
+    return (
+      <div className="border-r border-[#d6deed] p-2">
+        <input
+          value={draft}
+          onBlur={saveDraft}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.currentTarget.blur();
+            }
+
+            if (event.key === "Escape") {
+              setDraft(value);
+              setIsEditing(false);
+            }
+          }}
+          autoFocus
+          className="h-10 w-full rounded-md border border-[#07183b] bg-white px-2 text-sm font-semibold outline-none"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        setDraft(value);
+        setIsEditing(true);
+      }}
+      className="min-h-14 border-r border-[#d6deed] p-3 text-left transition hover:bg-[#f8faff]"
+      title="Edit task"
+    >
+      <p className="font-semibold">{value}</p>
+      {description ? (
+        <p className="mt-1 line-clamp-1 text-xs text-[#667085]">{description}</p>
+      ) : null}
+    </button>
+  );
+}
+
+function EditableSelectCell({ value, options, onSave }) {
+  const [isEditing, setIsEditing] = useState(false);
+
+  if (isEditing) {
+    return (
+      <div className="border-r border-[#d6deed] p-2">
+        <select
+          value={value}
+          onBlur={() => setIsEditing(false)}
+          onChange={async (event) => {
+            await onSave(event.target.value);
+            setIsEditing(false);
+          }}
+          autoFocus
+          className="h-10 w-full rounded-md border border-[#c4ccdc] bg-white px-2 text-sm font-semibold text-[#2f3442] outline-none"
+        >
+          {options.map((option) => (
+            <option key={option}>{option}</option>
+          ))}
+        </select>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setIsEditing(true)}
+      className="min-h-14 border-r border-[#d6deed] p-3 text-center font-semibold text-[#667085] transition hover:bg-[#f8faff]"
+      title="Edit priority"
+    >
+      {value || "-"}
+    </button>
+  );
+}
+
+function EditableDateTimeCell({ value, displayValue, onSave }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(toDateTimeInputValue(value));
+
+  async function saveDraft() {
+    await onSave(draft);
+    setIsEditing(false);
+  }
+
+  if (isEditing) {
+    return (
+      <div className="border-r border-[#d6deed] p-2">
+        <input
+          type="datetime-local"
+          value={draft}
+          onBlur={saveDraft}
+          onChange={(event) => setDraft(event.target.value)}
+          autoFocus
+          className="h-10 w-full rounded-md border border-[#c4ccdc] bg-white px-2 text-sm text-[#2f3442] outline-none"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        setDraft(toDateTimeInputValue(value));
+        setIsEditing(true);
+      }}
+      className="min-h-14 border-r border-[#d6deed] p-3 text-center text-[#667085] transition hover:bg-[#f8faff]"
+      title="Edit date"
+    >
+      {displayValue}
+    </button>
+  );
+}
+
+function EditableTimelineCell({ start, end, onSave }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftStart, setDraftStart] = useState(toDateTimeInputValue(start));
+  const [draftEnd, setDraftEnd] = useState(toDateTimeInputValue(end));
+
+  async function saveDraft() {
+    await onSave(draftStart, draftEnd);
+    setIsEditing(false);
+  }
+
+  if (isEditing) {
+    return (
+      <div className="border-r border-[#d6deed] p-2">
+        <div className="grid gap-2">
+          <input
+            type="datetime-local"
+            value={draftStart}
+            onChange={(event) => setDraftStart(event.target.value)}
+            className="h-9 w-full rounded-md border border-[#c4ccdc] bg-white px-2 text-xs text-[#2f3442] outline-none"
+          />
+          <input
+            type="datetime-local"
+            value={draftEnd}
+            onChange={(event) => setDraftEnd(event.target.value)}
+            className="h-9 w-full rounded-md border border-[#c4ccdc] bg-white px-2 text-xs text-[#2f3442] outline-none"
+          />
+          <button
+            type="button"
+            onClick={saveDraft}
+            className="h-8 rounded-md bg-[#07183b] px-2 text-xs font-bold text-white"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        setDraftStart(toDateTimeInputValue(start));
+        setDraftEnd(toDateTimeInputValue(end));
+        setIsEditing(true);
+      }}
+      className="min-h-14 border-r border-[#d6deed] p-3 text-center text-[#667085] transition hover:bg-[#f8faff]"
+      title="Edit timeline"
+    >
+      {formatTimeline(start, end)}
+    </button>
+  );
+}
+
 function formatDate(value) {
   if (!value) {
     return "-";
@@ -694,6 +1163,25 @@ function formatDate(value) {
     month: "short",
     day: "numeric",
   }).format(new Date(value));
+}
+
+function getDisplayName(employee) {
+  return employee?.username || employee?.email || "Employee";
+}
+
+function getInitials(employee) {
+  const name = getDisplayName(employee);
+  const parts = name.split(/[\s._-]+/).filter(Boolean);
+
+  if (!parts.length) {
+    return "?";
+  }
+
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 }
 
 function formatFullDate(value) {
@@ -714,4 +1202,19 @@ function formatTimeline(start, end) {
   }
 
   return `${formatDate(start)} - ${formatDate(end)}`;
+}
+
+function toDateTimeInputValue(value) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return offsetDate.toISOString().slice(0, 16);
 }
