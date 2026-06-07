@@ -27,6 +27,8 @@ const defaultColumns = [
   "Last updated",
 ];
 
+const groupColors = ["#579BFC", "#00C875", "#FDAB3D", "#DF2F4A", "#A855F7"];
+
 const statusStyles = {
   Open: "bg-[#579BFC] text-white",
   "In Progress": "bg-[#FDAB3D] text-white",
@@ -45,8 +47,9 @@ export default function WorkspaceManagement() {
   const [workspaceName, setWorkspaceName] = useState("");
   const [isWorkspaceDetailsOpen, setIsWorkspaceDetailsOpen] = useState(false);
   const [workspaceEditName, setWorkspaceEditName] = useState("");
+  const [groupName, setGroupName] = useState("To-Do");
+  const [groupColor, setGroupColor] = useState(groupColors[0]);
   const [columns, setColumns] = useState(defaultColumns);
-  const [newColumnName, setNewColumnName] = useState("");
 
   const currentWorkspace = useMemo(
     () => workspaces.find((workspace) => workspace.workspace_id === selectedWorkspaceId),
@@ -359,16 +362,19 @@ export default function WorkspaceManagement() {
     setIsAddingTask(true);
   }
 
-  function addColumn(event) {
-    event.preventDefault();
-    const nextColumn = newColumnName.trim();
-
-    if (!nextColumn || columns.includes(nextColumn)) {
+  function toggleColumn(column) {
+    if (column === "Task") {
       return;
     }
 
-    setColumns((current) => [...current, nextColumn]);
-    setNewColumnName("");
+    setColumns((current) =>
+      current.includes(column)
+        ? current.filter((currentColumn) => currentColumn !== column)
+        : defaultColumns.filter(
+            (availableColumn) =>
+              availableColumn === column || current.includes(availableColumn)
+          )
+    );
   }
 
   return (
@@ -443,23 +449,25 @@ export default function WorkspaceManagement() {
         <div className="min-h-0 flex-1 overflow-auto px-6 py-6">
           {currentWorkspace ? (
             <TaskGroup
-              color="#579BFC"
-              title="To-Do"
+              availableColumns={defaultColumns}
+              color={groupColor}
+              title={groupName}
               columns={columns}
               employees={employees}
               tasks={todoTasks}
               emptyText="Blank workspace ready. Add your first task."
               isAddingTask={isAddingTask}
               form={form}
-              newColumnName={newColumnName}
+              groupColors={groupColors}
+              onColorChange={setGroupColor}
+              onColumnToggle={toggleColumn}
+              onGroupNameChange={setGroupName}
               onUpdateField={updateField}
-              onNewColumnNameChange={setNewColumnName}
               onSaveTask={saveTask}
               onCancelTask={() => {
                 setForm(emptyTask);
                 setIsAddingTask(false);
               }}
-              onAddColumn={addColumn}
               onAddTask={startNewTask}
               onReorderTasks={reorderTasks}
               onTaskUpdate={updateTask}
@@ -546,6 +554,7 @@ function TemplatePrompt({ onCreateBlank }) {
 }
 
 function TaskGroup({
+  availableColumns,
   color,
   title,
   columns,
@@ -554,12 +563,13 @@ function TaskGroup({
   emptyText,
   isAddingTask,
   form,
-  newColumnName,
+  groupColors,
+  onColorChange,
+  onColumnToggle,
+  onGroupNameChange,
   onUpdateField,
-  onNewColumnNameChange,
   onSaveTask,
   onCancelTask,
-  onAddColumn,
   onAddTask,
   onReorderTasks,
   onTaskUpdate,
@@ -568,6 +578,7 @@ function TaskGroup({
   const [draggedTaskId, setDraggedTaskId] = useState(null);
   const [dragReadyTaskId, setDragReadyTaskId] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
+  const [isGroupSettingsOpen, setIsGroupSettingsOpen] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState(new Set());
   const gridTemplateColumns = `32px 44px ${columns
     .map((column) => (column === "Task" ? "360px" : "190px"))
@@ -589,10 +600,31 @@ function TaskGroup({
 
   return (
     <section className="mb-10 w-max min-w-full">
-      <h3 className="mb-3 flex items-center gap-3 text-2xl font-bold" style={{ color }}>
-        <span className="text-xl">⌄</span>
-        {title}
-      </h3>
+      <div className="relative mb-3 inline-flex">
+        <button
+          type="button"
+          onClick={() => setIsGroupSettingsOpen((current) => !current)}
+          className="flex items-center gap-3 rounded-md text-2xl font-bold transition hover:bg-[#eef6ff]"
+          style={{ color }}
+        >
+          <span className="text-xl">⌄</span>
+          {title}
+        </button>
+
+        {isGroupSettingsOpen ? (
+          <GroupSettingsPopover
+            availableColumns={availableColumns}
+            color={color}
+            colors={groupColors}
+            columns={columns}
+            title={title}
+            onClose={() => setIsGroupSettingsOpen(false)}
+            onColorChange={onColorChange}
+            onColumnToggle={onColumnToggle}
+            onTitleChange={onGroupNameChange}
+          />
+        ) : null}
+      </div>
 
       <div className="overflow-visible bg-white">
         <div
@@ -716,18 +748,90 @@ function TaskGroup({
         </div>
       </div>
 
-      <form onSubmit={onAddColumn} className="mt-4 flex max-w-sm gap-2">
-        <input
-          value={newColumnName}
-          onChange={(event) => onNewColumnNameChange(event.target.value)}
-          placeholder="Add column"
-          className="h-10 min-w-0 flex-1 rounded-md border border-[#c4ccdc] px-3 text-sm outline-none"
-        />
-        <button className="h-10 rounded-md border border-[#c4ccdc] px-3 text-sm font-bold hover:bg-[#eef6ff]">
-          Add
-        </button>
-      </form>
     </section>
+  );
+}
+
+function GroupSettingsPopover({
+  availableColumns,
+  color,
+  colors,
+  columns,
+  title,
+  onClose,
+  onColorChange,
+  onColumnToggle,
+  onTitleChange,
+}) {
+  return (
+    <div className="absolute left-0 top-12 z-30 w-96 rounded-xl border border-[#d6deed] bg-white p-4 text-[#2f3442] shadow-[0_18px_50px_rgba(7,24,59,0.18)]">
+      <div className="flex items-start justify-between gap-3">
+        <input
+          value={title}
+          onChange={(event) => onTitleChange(event.target.value)}
+          className="h-11 min-w-0 flex-1 rounded-md border border-[#c4ccdc] px-3 text-lg font-bold outline-none focus:border-[#07183b]"
+          aria-label="Group name"
+        />
+        <button
+          type="button"
+          onClick={onClose}
+          className="h-10 rounded-md px-3 text-sm font-bold text-[#667085] hover:bg-[#eef2f8]"
+        >
+          Close
+        </button>
+      </div>
+
+      <div className="mt-4">
+        <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">Color</p>
+        <div className="mt-2 flex gap-2">
+          {colors.map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => onColorChange(option)}
+              className={`h-8 w-8 rounded-full border-2 ${
+                color === option ? "border-[#07183b]" : "border-transparent"
+              }`}
+              style={{ backgroundColor: option }}
+              aria-label={`Use ${option} group color`}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-5">
+        <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">Columns</p>
+        <div className="mt-2 divide-y divide-[#edf1f7] rounded-lg border border-[#edf1f7]">
+          {availableColumns.map((column) => {
+            const isEnabled = columns.includes(column);
+            const isLocked = column === "Task";
+
+            return (
+              <button
+                key={column}
+                type="button"
+                disabled={isLocked}
+                onClick={() => onColumnToggle(column)}
+                className="flex w-full items-center justify-between gap-4 px-3 py-3 text-left text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                <span>{column}</span>
+                <span
+                  className={`flex h-6 w-11 items-center rounded-full p-0.5 transition ${
+                    isEnabled ? "bg-[#07183b]" : "bg-[#d8e0ee]"
+                  }`}
+                >
+                  <span
+                    className={`h-5 w-5 rounded-full bg-white shadow-sm transition ${
+                      isEnabled ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 
