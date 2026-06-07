@@ -294,6 +294,66 @@ export default function WorkspaceManagement() {
     await updateTask(task, { status });
   }
 
+  async function saveTaskOrder(orderedTasks) {
+    try {
+      const response = await fetch("/api/tasks", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(await authHeaders()),
+        },
+        body: JSON.stringify({
+          action: "reorder",
+          workspaceId: selectedWorkspaceId,
+          tasks: orderedTasks.map((task, index) => ({
+            taskId: task.task_id,
+            sortOrder: index,
+          })),
+        }),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Could not save task order.");
+      }
+    } catch (orderError) {
+      setError(orderError.message);
+      await loadTasks();
+    }
+  }
+
+  function reorderTasks(draggedTaskId, targetTaskId, dropPosition = "before") {
+    if (!draggedTaskId || !targetTaskId || draggedTaskId === targetTaskId) {
+      return;
+    }
+
+    let reorderedTasks = [];
+
+    setTasks((currentTasks) => {
+      const draggedIndex = currentTasks.findIndex((task) => task.task_id === draggedTaskId);
+      const targetIndex = currentTasks.findIndex((task) => task.task_id === targetTaskId);
+
+      if (draggedIndex < 0 || targetIndex < 0) {
+        return currentTasks;
+      }
+
+      const nextTasks = [...currentTasks];
+      const [draggedTask] = nextTasks.splice(draggedIndex, 1);
+      const nextTargetIndex = nextTasks.findIndex((task) => task.task_id === targetTaskId);
+      const insertIndex = dropPosition === "after" ? nextTargetIndex + 1 : nextTargetIndex;
+      nextTasks.splice(insertIndex, 0, draggedTask);
+      reorderedTasks = nextTasks;
+
+      return nextTasks;
+    });
+
+    setTimeout(() => {
+      if (reorderedTasks.length) {
+        saveTaskOrder(reorderedTasks);
+      }
+    }, 0);
+  }
+
   function startNewTask() {
     setForm(emptyTask);
     setIsAddingTask(true);
@@ -401,6 +461,7 @@ export default function WorkspaceManagement() {
               }}
               onAddColumn={addColumn}
               onAddTask={startNewTask}
+              onReorderTasks={reorderTasks}
               onTaskUpdate={updateTask}
               onStatusChange={updateTaskStatus}
             />
@@ -500,30 +561,48 @@ function TaskGroup({
   onCancelTask,
   onAddColumn,
   onAddTask,
+  onReorderTasks,
   onTaskUpdate,
   onStatusChange,
 }) {
-  const gridTemplateColumns = `44px ${columns
-    .map((column) => (column === "Task" ? "minmax(260px,1.8fr)" : "minmax(150px,1fr)"))
+  const [draggedTaskId, setDraggedTaskId] = useState(null);
+  const [dragReadyTaskId, setDragReadyTaskId] = useState(null);
+  const [dropTarget, setDropTarget] = useState(null);
+  const [selectedTaskIds, setSelectedTaskIds] = useState(new Set());
+  const gridTemplateColumns = `32px 44px ${columns
+    .map((column) => (column === "Task" ? "360px" : "190px"))
     .join(" ")}`;
 
+  function toggleTaskSelection(taskId) {
+    setSelectedTaskIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+
+      return next;
+    });
+  }
+
   return (
-    <section className="mb-10 min-w-[1600px]">
+    <section className="mb-10 w-max min-w-full">
       <h3 className="mb-3 flex items-center gap-3 text-2xl font-bold" style={{ color }}>
         <span className="text-xl">⌄</span>
         {title}
       </h3>
 
-      <div className="overflow-visible rounded-lg border border-[#d6deed] bg-white shadow-sm">
+      <div className="overflow-visible bg-white">
         <div
-          className="grid border-l-8 text-sm font-bold text-[#2f3442]"
-          style={{ borderLeftColor: color, gridTemplateColumns }}
+          className="grid border-b border-[#d6deed] text-sm font-bold text-[#2f3442]"
+          style={{ gridTemplateColumns }}
         >
-          <div className="border-r border-[#d6deed] bg-[#fbfcff] p-3">
-            <span className="block h-5 w-5 rounded border border-[#b8c4d8]" />
-          </div>
+          <div className="bg-[#fbfcff] p-2" />
+          <div className="bg-[#fbfcff] p-3" />
           {columns.map((column) => (
-            <div key={column} className="border-r border-[#d6deed] bg-[#fbfcff] p-3">
+            <div key={column} className="bg-[#fbfcff] p-3">
               {column}
             </div>
           ))}
@@ -534,20 +613,66 @@ function TaskGroup({
             <TaskRow
               key={task.task_id}
               task={task}
-              color={color}
               columns={columns}
               employees={employees}
               gridTemplateColumns={gridTemplateColumns}
+              isDragReady={dragReadyTaskId === task.task_id}
+              isDragging={draggedTaskId === task.task_id}
+              isSelected={selectedTaskIds.has(task.task_id)}
+              dropPosition={
+                dropTarget?.taskId === task.task_id ? dropTarget.position : null
+              }
+              onDragEnd={() => {
+                setDraggedTaskId(null);
+                setDragReadyTaskId(null);
+                setDropTarget(null);
+              }}
+              onDragOver={(event) => {
+                event.preventDefault();
+
+                if (!draggedTaskId || draggedTaskId === task.task_id) {
+                  setDropTarget(null);
+                  return;
+                }
+
+                const rect = event.currentTarget.getBoundingClientRect();
+                const position =
+                  event.clientY - rect.top > rect.height / 2 ? "after" : "before";
+                setDropTarget({ taskId: task.task_id, position });
+              }}
+              onDragStart={(event) => {
+                event.dataTransfer.effectAllowed = "move";
+                setDraggedTaskId(task.task_id);
+              }}
+              onDrop={() => {
+                onReorderTasks(
+                  draggedTaskId,
+                  task.task_id,
+                  dropTarget?.taskId === task.task_id ? dropTarget.position : "before"
+                );
+                setDraggedTaskId(null);
+                setDragReadyTaskId(null);
+                setDropTarget(null);
+              }}
+              onPrepareDrag={() => setDragReadyTaskId(task.task_id)}
+              onReleaseDrag={() => setDragReadyTaskId(null)}
+              onSelect={() => toggleTaskSelection(task.task_id)}
+              onRowDragLeave={() => {
+                setDropTarget((current) =>
+                  current?.taskId === task.task_id ? null : current
+                );
+              }}
               onTaskUpdate={onTaskUpdate}
               onStatusChange={onStatusChange}
             />
           ))
         ) : !isAddingTask ? (
           <div
-            className="grid border-l-8 border-t border-[#d6deed] text-sm text-[#667085]"
-            style={{ borderLeftColor: color, gridTemplateColumns }}
+            className="grid border-b border-[#d6deed] text-sm text-[#667085]"
+            style={{ gridTemplateColumns }}
           >
-            <div className="border-r border-[#d6deed] p-3" />
+            <div />
+            <div className="p-3" />
             <div className="p-3" style={{ gridColumn: `span ${columns.length}` }}>
               {emptyText}
             </div>
@@ -556,7 +681,6 @@ function TaskGroup({
 
         {isAddingTask ? (
           <InlineTaskFormRow
-            color={color}
             columns={columns}
             employees={employees}
             form={form}
@@ -568,11 +692,18 @@ function TaskGroup({
         ) : null}
 
         <div
-          className="grid border-l-8 border-t border-[#d6deed] text-sm text-[#667085]"
-          style={{ borderLeftColor: color, gridTemplateColumns }}
+          className="grid border-b border-[#d6deed] text-sm text-[#667085]"
+          style={{ gridTemplateColumns }}
         >
-          <div className="border-r border-[#d6deed] p-3">
-            <span className="block h-5 w-5 rounded border border-[#d6deed]" />
+          <div className="flex items-center justify-center p-2">
+            <span className="text-base font-bold leading-none text-[#CBD5E1]">⋮⋮</span>
+          </div>
+          <div className="flex items-center justify-center p-3">
+            <input
+              type="checkbox"
+              className="h-5 w-5 rounded border-[#d6deed] text-[#07183b]"
+              aria-label="Select new task row"
+            />
           </div>
           <button
             type="button"
@@ -601,7 +732,6 @@ function TaskGroup({
 }
 
 function InlineTaskFormRow({
-  color,
   columns,
   employees,
   form,
@@ -613,11 +743,18 @@ function InlineTaskFormRow({
   return (
     <form
       onSubmit={onSave}
-      className="grid border-l-8 border-t border-[#d6deed] bg-[#e8f3ff] text-sm text-[#2f3442]"
-      style={{ borderLeftColor: color, gridTemplateColumns }}
+      className="grid border-b border-[#d6deed] bg-[#e8f3ff] text-sm text-[#2f3442]"
+      style={{ gridTemplateColumns }}
     >
-      <div className="border-r border-[#d6deed] bg-white p-3">
-        <span className="block h-5 w-5 rounded border border-[#b8c4d8]" />
+      <div className="bg-white p-2">
+        <span className="block text-center text-base font-bold leading-none text-[#98A2B3]">⋮⋮</span>
+      </div>
+      <div className="flex items-center justify-center bg-white p-3">
+        <input
+          type="checkbox"
+          className="h-5 w-5 rounded border-[#b8c4d8] text-[#07183b]"
+          aria-label="Select task draft"
+        />
       </div>
       {columns.map((column) => (
         <InlineTaskCell
@@ -636,7 +773,7 @@ function InlineTaskFormRow({
 function InlineTaskCell({ column, employees, form, onCancel, onUpdateField }) {
   if (column === "Task") {
     return (
-      <div className="border-r border-[#d6deed] bg-white p-2">
+      <div className="bg-white p-2">
         <input
           value={form.title}
           onChange={(event) => onUpdateField("title", event.target.value)}
@@ -651,7 +788,7 @@ function InlineTaskCell({ column, employees, form, onCancel, onUpdateField }) {
 
   if (column === "Status") {
     return (
-      <div className="border-r border-[#d6deed] bg-white p-2">
+      <div className="bg-white p-2">
         <select
           value={form.status}
           onChange={(event) => onUpdateField("status", event.target.value)}
@@ -678,7 +815,7 @@ function InlineTaskCell({ column, employees, form, onCancel, onUpdateField }) {
 
   if (column === "Priority") {
     return (
-      <div className="border-r border-[#d6deed] bg-white p-2">
+      <div className="bg-white p-2">
         <select
           value={form.priority}
           onChange={(event) => onUpdateField("priority", event.target.value)}
@@ -695,7 +832,7 @@ function InlineTaskCell({ column, employees, form, onCancel, onUpdateField }) {
 
   if (column === "Due Date") {
     return (
-      <div className="border-r border-[#d6deed] bg-white p-2">
+      <div className="bg-white p-2">
         <input
           type="datetime-local"
           value={form.endDatetime}
@@ -708,7 +845,7 @@ function InlineTaskCell({ column, employees, form, onCancel, onUpdateField }) {
 
   if (column === "Timeline") {
     return (
-      <div className="border-r border-[#d6deed] bg-white p-2">
+      <div className="bg-white p-2">
         <input
           type="datetime-local"
           value={form.startDatetime}
@@ -721,7 +858,7 @@ function InlineTaskCell({ column, employees, form, onCancel, onUpdateField }) {
 
   if (column === "Last updated") {
     return (
-      <div className="flex items-center gap-2 border-r border-[#d6deed] bg-white p-2">
+      <div className="flex items-center gap-2 bg-white p-2">
         <button
           type="submit"
           className="h-9 rounded-md bg-[#07183b] px-3 text-xs font-bold text-white transition hover:bg-[#0D1E4C]"
@@ -744,10 +881,21 @@ function InlineTaskCell({ column, employees, form, onCancel, onUpdateField }) {
 
 function TaskRow({
   task,
-  color,
   columns,
   employees,
   gridTemplateColumns,
+  isDragReady,
+  isDragging,
+  isSelected,
+  dropPosition,
+  onDragEnd,
+  onDragOver,
+  onDragStart,
+  onDrop,
+  onPrepareDrag,
+  onReleaseDrag,
+  onSelect,
+  onRowDragLeave,
   onTaskUpdate,
   onStatusChange,
 }) {
@@ -755,11 +903,43 @@ function TaskRow({
 
   return (
     <div
-      className="grid border-l-8 border-t border-[#d6deed] text-sm text-[#2f3442]"
-      style={{ borderLeftColor: color, gridTemplateColumns }}
+      draggable={isDragReady}
+      onDragEnd={onDragEnd}
+      onDragOver={onDragOver}
+      onDragStart={onDragStart}
+      onDrop={onDrop}
+      onDragLeave={onRowDragLeave}
+      className={`relative grid border-b border-[#d6deed] text-sm text-[#2f3442] transition ${
+        isDragging ? "opacity-50" : "opacity-100"
+      } ${isSelected ? "bg-[#93C5FD]" : "bg-white"}`}
+      style={{ gridTemplateColumns }}
     >
-      <div className="border-r border-[#d6deed] p-3">
-        <span className="block h-5 w-5 rounded border border-[#b8c4d8]" />
+      {dropPosition ? (
+        <div
+          className={`pointer-events-none absolute left-0 right-0 z-20 h-0.5 rounded-full bg-[#1E40AF] shadow-[0_0_0_2px_rgba(7,24,59,0.12)] ${
+            dropPosition === "before" ? "-top-0.5" : "-bottom-0.5"
+          }`}
+        />
+      ) : null}
+      <div
+        className="flex cursor-grab items-center justify-center p-2 text-[#98A2B3] active:cursor-grabbing"
+        onMouseDown={onPrepareDrag}
+        onMouseUp={onReleaseDrag}
+        onTouchStart={onPrepareDrag}
+        onTouchEnd={onReleaseDrag}
+      >
+        <span className="select-none text-base font-bold leading-none" title="Drag row">
+          ⋮⋮
+        </span>
+      </div>
+      <div className="flex items-center justify-center p-3">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={onSelect}
+          className="h-5 w-5 rounded border-[#b8c4d8] text-[#07183b]"
+          aria-label={`Select ${task.title ?? "task"}`}
+        />
       </div>
       {columns.map((column) => (
         <TaskCell
@@ -796,7 +976,7 @@ function TaskCell({
 
   if (column === "Status") {
     return (
-      <div className="border-r border-[#d6deed] p-2">
+      <div className="p-2">
         <select
           value={status}
           onChange={(event) => onStatusChange(task, event.target.value)}
@@ -871,7 +1051,7 @@ function TaskCell({
 
 function TableText({ value }) {
   return (
-    <div className="border-r border-[#d6deed] p-3 text-center text-[#667085]">
+    <div className="p-3 text-center text-[#667085]">
       {value || "-"}
     </div>
   );
@@ -881,8 +1061,9 @@ function PeoplePickerCell({ employees, selectedUserId, onAssign }) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const selectedEmployee = employees.find((employee) => employee.user_id === selectedUserId);
-  const filteredEmployees = employees.filter((employee) => {
-    const searchText = `${employee.username ?? ""} ${employee.email ?? ""}`.toLowerCase();
+  const availableEmployees = employees.filter((employee) => employee.user_id !== selectedUserId);
+  const filteredEmployees = availableEmployees.filter((employee) => {
+    const searchText = getEmployeeSearchText(employee);
     return searchText.includes(query.trim().toLowerCase());
   });
 
@@ -892,7 +1073,7 @@ function PeoplePickerCell({ employees, selectedUserId, onAssign }) {
   }
 
   return (
-    <div className="relative border-r border-[#d6deed] p-2">
+    <div className="relative p-2">
       <button
         type="button"
         onClick={() => setIsOpen((current) => !current)}
@@ -908,18 +1089,19 @@ function PeoplePickerCell({ employees, selectedUserId, onAssign }) {
       </button>
 
       {isOpen ? (
-        <div className="absolute left-2 top-12 z-30 w-80 rounded-xl border border-[#d6deed] bg-white p-3 shadow-[0_18px_50px_rgba(7,24,59,0.18)]">
+        <div className="absolute left-2 top-12 z-30 w-96 rounded-xl border border-[#d6deed] bg-white p-3 shadow-[0_18px_50px_rgba(7,24,59,0.18)]">
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search or enter email..."
+            placeholder="Search by name, department or skill"
             autoFocus
             className="h-11 w-full rounded-md border border-[#c4ccdc] px-3 text-sm text-[#2f3442] outline-none focus:border-[#07183b]"
           />
-          <p className="mt-4 px-1 text-xs font-bold uppercase tracking-wide text-[#667085]">
-            People
-          </p>
-          <div className="mt-2 max-h-64 overflow-y-auto">
+
+          <div className="mt-4 border-b border-[#e3e9f3] pb-3">
+            <p className="px-1 text-xs font-bold uppercase tracking-wide text-[#667085]">
+              Currently assigned
+            </p>
             {selectedEmployee ? (
               <button
                 type="button"
@@ -927,14 +1109,32 @@ function PeoplePickerCell({ employees, selectedUserId, onAssign }) {
                   onAssign("");
                   closePicker();
                 }}
-                className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm font-semibold text-[#667085] hover:bg-[#f8faff]"
+                className="mt-2 flex w-full items-center gap-3 rounded-md px-2 py-2 text-left hover:bg-[#f8faff]"
               >
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#eef2f8] text-xs">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#07183b] text-xs font-bold text-white">
+                  {getInitials(selectedEmployee)}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-[#2f3442]">
+                    {getDisplayName(selectedEmployee)}
+                  </span>
+                  <span className="block truncate text-xs text-[#667085]">
+                    {selectedEmployee.email}
+                  </span>
+                </span>
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#eef2f8] text-lg font-bold text-[#667085]">
                   -
                 </span>
-                Clear assignment
               </button>
-            ) : null}
+            ) : (
+              <p className="px-2 py-3 text-sm text-[#667085]">No employee assigned.</p>
+            )}
+          </div>
+
+          <p className="mt-4 px-1 text-xs font-bold uppercase tracking-wide text-[#667085]">
+            Assign employee
+          </p>
+          <div className="mt-2 max-h-64 overflow-y-auto">
             {filteredEmployees.map((employee) => (
               <button
                 key={employee.user_id}
@@ -953,6 +1153,11 @@ function PeoplePickerCell({ employees, selectedUserId, onAssign }) {
                     {getDisplayName(employee)}
                   </span>
                   <span className="block truncate text-xs text-[#667085]">{employee.email}</span>
+                  {employee.skills?.length ? (
+                    <span className="mt-1 block truncate text-xs text-[#667085]">
+                      {employee.skills.join(", ")}
+                    </span>
+                  ) : null}
                 </span>
               </button>
             ))}
@@ -985,7 +1190,7 @@ function EditableTextCell({ value, description, onSave }) {
 
   if (isEditing) {
     return (
-      <div className="border-r border-[#d6deed] p-2">
+      <div className="p-2">
         <input
           value={draft}
           onBlur={saveDraft}
@@ -1014,7 +1219,7 @@ function EditableTextCell({ value, description, onSave }) {
         setDraft(value);
         setIsEditing(true);
       }}
-      className="min-h-14 border-r border-[#d6deed] p-3 text-left transition hover:bg-[#f8faff]"
+      className="min-h-14 p-3 text-left transition hover:bg-[#f8faff]"
       title="Edit task"
     >
       <p className="font-semibold">{value}</p>
@@ -1030,7 +1235,7 @@ function EditableSelectCell({ value, options, onSave }) {
 
   if (isEditing) {
     return (
-      <div className="border-r border-[#d6deed] p-2">
+      <div className="p-2">
         <select
           value={value}
           onBlur={() => setIsEditing(false)}
@@ -1053,7 +1258,7 @@ function EditableSelectCell({ value, options, onSave }) {
     <button
       type="button"
       onClick={() => setIsEditing(true)}
-      className="min-h-14 border-r border-[#d6deed] p-3 text-center font-semibold text-[#667085] transition hover:bg-[#f8faff]"
+      className="min-h-14 p-3 text-center font-semibold text-[#667085] transition hover:bg-[#f8faff]"
       title="Edit priority"
     >
       {value || "-"}
@@ -1072,7 +1277,7 @@ function EditableDateTimeCell({ value, displayValue, onSave }) {
 
   if (isEditing) {
     return (
-      <div className="border-r border-[#d6deed] p-2">
+      <div className="p-2">
         <input
           type="datetime-local"
           value={draft}
@@ -1092,7 +1297,7 @@ function EditableDateTimeCell({ value, displayValue, onSave }) {
         setDraft(toDateTimeInputValue(value));
         setIsEditing(true);
       }}
-      className="min-h-14 border-r border-[#d6deed] p-3 text-center text-[#667085] transition hover:bg-[#f8faff]"
+      className="min-h-14 p-3 text-center text-[#667085] transition hover:bg-[#f8faff]"
       title="Edit date"
     >
       {displayValue}
@@ -1112,7 +1317,7 @@ function EditableTimelineCell({ start, end, onSave }) {
 
   if (isEditing) {
     return (
-      <div className="border-r border-[#d6deed] p-2">
+      <div className="p-2">
         <div className="grid gap-2">
           <input
             type="datetime-local"
@@ -1146,7 +1351,7 @@ function EditableTimelineCell({ start, end, onSave }) {
         setDraftEnd(toDateTimeInputValue(end));
         setIsEditing(true);
       }}
-      className="min-h-14 border-r border-[#d6deed] p-3 text-center text-[#667085] transition hover:bg-[#f8faff]"
+      className="min-h-14 p-3 text-center text-[#667085] transition hover:bg-[#f8faff]"
       title="Edit timeline"
     >
       {formatTimeline(start, end)}
@@ -1182,6 +1387,18 @@ function getInitials(employee) {
     .map((part) => part[0])
     .join("")
     .toUpperCase();
+}
+
+function getEmployeeSearchText(employee) {
+  return [
+    employee?.username,
+    employee?.email,
+    employee?.department,
+    ...(employee?.skills ?? []),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
 }
 
 function formatFullDate(value) {

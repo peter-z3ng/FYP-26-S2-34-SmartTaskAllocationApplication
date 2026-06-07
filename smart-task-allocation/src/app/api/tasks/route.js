@@ -6,6 +6,19 @@ function cleanString(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function normalizeTaskOrder(tasks) {
+  if (!Array.isArray(tasks)) {
+    return [];
+  }
+
+  return tasks
+    .map((task, index) => ({
+      taskId: task?.taskId,
+      sortOrder: Number.isFinite(Number(task?.sortOrder)) ? Number(task.sortOrder) : index,
+    }))
+    .filter((task) => task.taskId);
+}
+
 async function getManagerOrganizationId(supabase, user) {
   const { data } = await supabase
     .from("user_account")
@@ -38,7 +51,11 @@ export async function GET(request) {
     const organizationId = await getManagerOrganizationId(supabase, user);
     const { searchParams } = new URL(request.url);
     const workspaceId = searchParams.get("workspaceId");
-    let query = supabase.from("task").select("*").order("created_at", { ascending: false });
+    let query = supabase
+      .from("task")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
 
     if (organizationId) {
       query = query.eq("organization_id", organizationId);
@@ -95,6 +112,17 @@ export async function POST(request) {
       return NextResponse.json({ error: "Workspace ID is required." }, { status: 400 });
     }
 
+    const { data: lastTask } = await supabase
+      .from("task")
+      .select("sort_order")
+      .eq("workspace_id", workspaceId)
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const nextSortOrder = Number.isFinite(Number(lastTask?.sort_order))
+      ? Number(lastTask.sort_order) + 1
+      : 0;
+
     const { error } = await supabase.from("task").insert({
       organization_id: organizationId,
       workspace_id: workspaceId,
@@ -106,6 +134,7 @@ export async function POST(request) {
       priority: cleanString(priority) || "Medium",
       start_datetime: startDatetime || null,
       end_datetime: endDatetime || null,
+      sort_order: nextSortOrder,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
@@ -123,14 +152,60 @@ export async function POST(request) {
 export async function PATCH(request) {
   try {
     const supabase = getSupabaseAdminClient();
-    const { error: authError } = await requireManager(request, supabase);
+    const { user, error: authError } = await requireManager(request, supabase);
 
     if (authError) {
       return NextResponse.json({ error: authError }, { status: 403 });
     }
 
-    const { taskId, title, description, assignedTo, status, priority, startDatetime, endDatetime } =
-      await request.json();
+    const body = await request.json();
+    const {
+      action,
+      workspaceId,
+      tasks,
+      taskId,
+      title,
+      description,
+      assignedTo,
+      status,
+      priority,
+      startDatetime,
+      endDatetime,
+    } = body;
+
+    if (action === "reorder") {
+      const orderedTasks = normalizeTaskOrder(tasks);
+
+      if (!workspaceId) {
+        return NextResponse.json({ error: "Workspace ID is required." }, { status: 400 });
+      }
+
+      if (!orderedTasks.length) {
+        return NextResponse.json({ error: "Tasks are required." }, { status: 400 });
+      }
+
+      const organizationId = await getManagerOrganizationId(supabase, user);
+      const updates = orderedTasks.map((task) =>
+        supabase
+          .from("task")
+          .update({
+            sort_order: task.sortOrder,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("task_id", task.taskId)
+          .eq("workspace_id", workspaceId)
+          .eq("organization_id", organizationId)
+      );
+      const results = await Promise.all(updates);
+      const failedUpdate = results.find((result) => result.error);
+
+      if (failedUpdate?.error) {
+        return NextResponse.json({ error: failedUpdate.error.message }, { status: 400 });
+      }
+
+      return NextResponse.json({ success: true });
+    }
+
     const { error } = await supabase
       .from("task")
       .update({

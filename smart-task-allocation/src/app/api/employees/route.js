@@ -56,7 +56,37 @@ export async function GET(request) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json({ employees: data ?? [] });
+    const employeeIds = (data ?? []).map((employee) => employee.user_id);
+    const { data: skillRows, error: skillError } = employeeIds.length
+      ? await supabase
+          .from("user_skill")
+          .select("user_id, skill:skill_id(skill_name)")
+          .in("user_id", employeeIds)
+      : { data: [], error: null };
+
+    if (skillError) {
+      return NextResponse.json({ error: skillError.message }, { status: 400 });
+    }
+
+    const skillsByUserId = new Map();
+
+    for (const row of skillRows ?? []) {
+      const currentSkills = skillsByUserId.get(row.user_id) ?? [];
+      const skillName = row.skill?.skill_name;
+
+      if (skillName) {
+        currentSkills.push(skillName);
+      }
+
+      skillsByUserId.set(row.user_id, currentSkills);
+    }
+
+    return NextResponse.json({
+      employees: (data ?? []).map((employee) => ({
+        ...employee,
+        skills: skillsByUserId.get(employee.user_id) ?? [],
+      })),
+    });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

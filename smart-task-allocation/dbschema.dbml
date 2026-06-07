@@ -114,6 +114,7 @@ Table task {
     priority varchar [not null, default: 'Medium']
     start_datetime timestamptz
     end_datetime timestamptz
+    sort_order int [not null, default: 0]
     created_at timestamptz
     updated_at timestamptz
 }
