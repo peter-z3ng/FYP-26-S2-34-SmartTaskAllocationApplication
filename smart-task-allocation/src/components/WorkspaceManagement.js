@@ -47,6 +47,7 @@ export default function WorkspaceManagement() {
   const [workspaceName, setWorkspaceName] = useState("");
   const [openWorkspaceMenuId, setOpenWorkspaceMenuId] = useState("");
   const [favoriteWorkspaceIds, setFavoriteWorkspaceIds] = useState(new Set());
+  const [isWorkspaceSidebarCollapsed, setIsWorkspaceSidebarCollapsed] = useState(false);
   const [isWorkspaceDetailsOpen, setIsWorkspaceDetailsOpen] = useState(false);
   const [workspaceEditName, setWorkspaceEditName] = useState("");
   const [groupName, setGroupName] = useState("To-Do");
@@ -464,9 +465,39 @@ export default function WorkspaceManagement() {
   }
 
   return (
-    <div className="grid h-full min-h-0 overflow-hidden rounded-2xl border border-[#d6deed] bg-white shadow-sm lg:grid-cols-[360px_minmax(0,1fr)]">
-      <aside className="overflow-y-auto border-b border-[#d6deed] bg-[#BBE1FA] p-6 lg:border-b-0 lg:border-r">
-        <h2 className="text-lg font-medium text-[#0D1E4C]">Workspace</h2>
+    <div
+      className={`grid h-full min-h-0 overflow-hidden rounded-2xl border border-[#d6deed] bg-white shadow-sm transition-[grid-template-columns] ${
+        isWorkspaceSidebarCollapsed
+          ? "lg:grid-cols-[40px_minmax(0,1fr)]"
+          : "lg:grid-cols-[300px_minmax(0,1fr)]"
+      }`}
+    >
+      <aside className="relative overflow-visible border-b border-[#d6deed] bg-[#BBE1FA] p-4 lg:border-b-0 lg:border-r">
+        <button
+          type="button"
+          onClick={() => setIsWorkspaceSidebarCollapsed((current) => !current)}
+          className="absolute right-1.5 top-6.5 flex items-center justify-center font-bold text-[#1E293B] hover:text-[#1E40AF]"
+          aria-label={isWorkspaceSidebarCollapsed ? "Expand workspace menu" : "Collapse workspace menu"}
+          title={isWorkspaceSidebarCollapsed ? "Expand workspace menu" : "Collapse workspace menu"}
+        >
+          <span
+            className="material-symbols-outlined"
+            style={{ fontSize: "26px" }}
+            aria-hidden="true"
+          >
+            {isWorkspaceSidebarCollapsed ? "left_panel_open" : "left_panel_close"}
+          </span>
+        </button>
+
+        {isWorkspaceSidebarCollapsed ? (
+          <div className="flex h-full flex-col items-center pt-20 text-[#07183b]">
+            <span className="rotate-90 whitespace-nowrap text-md font-semibold tracking-widest">
+              Workspace
+            </span>
+          </div>
+        ) : (
+          <>
+        <h2 className="text-lg pt-2 font-medium text-[#0D1E4C]">Workspace</h2>
 
         <form onSubmit={createWorkspace} className="mt-6 flex gap-2">
           <input
@@ -562,6 +593,8 @@ export default function WorkspaceManagement() {
             </p>
           ) : null}
         </div>
+          </>
+        )}
       </aside>
 
       <section className="flex min-h-0 min-w-0 flex-col bg-white">

@@ -52,18 +52,18 @@ Table availability {
 }
 
 Table skill {
-    skill_id int [pk]
-    skill_name varchar unique
+    skill_id int [pk, increment]
+    skill_name varchar [unique, not null]
     description text
-    created_at timestamptz
+    created_at timestamptz [not null, default: `now()`]
     updated_at timestamptz
 }
 
 Table user_skill {
-    user_id uuid [ref: > user_account.user_id]
-    skill_id int [ref: > skill.skill_id]
-    proficiency_level int
-    created_at timestamptz
+    user_id uuid [pk, ref: > user_account.user_id]
+    skill_id int [pk, ref: > skill.skill_id]
+    proficiency_level varchar [not null]
+    created_at timestamptz [not null, default: `now()`]
     updated_at timestamptz
 }
 
