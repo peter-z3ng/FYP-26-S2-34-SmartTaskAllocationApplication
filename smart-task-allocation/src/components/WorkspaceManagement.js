@@ -45,6 +45,8 @@ export default function WorkspaceManagement() {
   const [workspaces, setWorkspaces] = useState([]);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [workspaceName, setWorkspaceName] = useState("");
+  const [openWorkspaceMenuId, setOpenWorkspaceMenuId] = useState("");
+  const [favoriteWorkspaceIds, setFavoriteWorkspaceIds] = useState(new Set());
   const [isWorkspaceDetailsOpen, setIsWorkspaceDetailsOpen] = useState(false);
   const [workspaceEditName, setWorkspaceEditName] = useState("");
   const [groupName, setGroupName] = useState("To-Do");
@@ -150,6 +152,20 @@ export default function WorkspaceManagement() {
     setIsWorkspaceDetailsOpen(true);
   }
 
+  function toggleWorkspaceFavorite(workspaceId) {
+    setFavoriteWorkspaceIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(workspaceId)) {
+        next.delete(workspaceId);
+      } else {
+        next.add(workspaceId);
+      }
+
+      return next;
+    });
+  }
+
   async function updateWorkspaceName(event) {
     event.preventDefault();
     const nextName = workspaceEditName.trim();
@@ -188,6 +204,76 @@ export default function WorkspaceManagement() {
       setIsWorkspaceDetailsOpen(false);
     } catch (updateError) {
       setError(updateError.message);
+    }
+  }
+
+  async function updateWorkspace(workspaceId, values) {
+    setError("");
+
+    try {
+      const response = await fetch("/api/workspaces", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(await authHeaders()),
+        },
+        body: JSON.stringify({ workspaceId, ...values }),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Could not update workspace.");
+      }
+
+      await loadWorkspaces();
+    } catch (updateError) {
+      setError(updateError.message);
+    }
+  }
+
+  async function renameWorkspaceFromMenu(workspace) {
+    const nextName = window.prompt("Rename workspace", workspace.workspace_name);
+
+    if (!nextName?.trim()) {
+      return;
+    }
+
+    await updateWorkspace(workspace.workspace_id, { workspaceName: nextName });
+  }
+
+  async function duplicateWorkspace(workspace) {
+    await createWorkspaceWithName(`${workspace.workspace_name} copy`);
+  }
+
+  async function deleteWorkspace(workspace) {
+    if (!window.confirm(`Delete ${workspace.workspace_name}?`)) {
+      return;
+    }
+
+    setError("");
+
+    try {
+      const response = await fetch(`/api/workspaces?workspaceId=${workspace.workspace_id}`, {
+        method: "DELETE",
+        headers: await authHeaders(),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Could not delete workspace.");
+      }
+
+      setWorkspaces((current) =>
+        current.filter((currentWorkspace) => currentWorkspace.workspace_id !== workspace.workspace_id)
+      );
+      setSelectedWorkspaceId((current) =>
+        current === workspace.workspace_id
+          ? workspaces.find((candidate) => candidate.workspace_id !== workspace.workspace_id)
+              ?.workspace_id ?? ""
+          : current
+      );
+    } catch (deleteError) {
+      setError(deleteError.message);
     }
   }
 
@@ -402,21 +488,72 @@ export default function WorkspaceManagement() {
             const isActive = workspace.workspace_id === selectedWorkspaceId;
 
             return (
-              <button
-                key={workspace.workspace_id}
-                type="button"
-                onClick={() => setSelectedWorkspaceId(workspace.workspace_id)}
-                className={`flex h-12 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-medium transition ${
+              <div key={workspace.workspace_id} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setSelectedWorkspaceId(workspace.workspace_id)}
+                  className={`flex h-12 w-full items-center gap-3 rounded-md px-3 pr-11 text-left text-sm font-medium transition ${
                   isActive
                     ? "bg-[#cfe7ff] text-[#233246]"
                     : "text-[#667085] hover:bg-[#eef6ff] hover:text-[#233246]"
                 }`}
-              >
-                <span className="flex h-7 w-7 items-center justify-center rounded-md text-xl text-[#475467]">
-                  ▣
-                </span>
-                <span className="min-w-0 truncate">{workspace.workspace_name}</span>
-              </button>
+                >
+                  <span className="flex h-7 w-7 items-center justify-center rounded-md text-xl text-[#475467]">
+                    ▣
+                  </span>
+                  <span className="min-w-0 truncate">
+                    {favoriteWorkspaceIds.has(workspace.workspace_id) ? "★ " : ""}
+                    {workspace.workspace_name}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setOpenWorkspaceMenuId((current) =>
+                      current === workspace.workspace_id ? "" : workspace.workspace_id
+                    );
+                  }}
+                  className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-md text-lg font-bold text-[#667085] hover:bg-white/60"
+                  aria-label={`Open ${workspace.workspace_name} menu`}
+                >
+                  ...
+                </button>
+                {openWorkspaceMenuId === workspace.workspace_id ? (
+                  <WorkspaceRowMenu
+                    isFavorite={favoriteWorkspaceIds.has(workspace.workspace_id)}
+                    workspace={workspace}
+                    onArchive={() => {
+                      setOpenWorkspaceMenuId("");
+                      updateWorkspace(workspace.workspace_id, { status: "Archived" });
+                    }}
+                    onDelete={() => {
+                      setOpenWorkspaceMenuId("");
+                      deleteWorkspace(workspace);
+                    }}
+                    onDuplicate={() => {
+                      setOpenWorkspaceMenuId("");
+                      duplicateWorkspace(workspace);
+                    }}
+                    onFavorite={() => {
+                      setOpenWorkspaceMenuId("");
+                      toggleWorkspaceFavorite(workspace.workspace_id);
+                    }}
+                    onPrivate={() => {
+                      setOpenWorkspaceMenuId("");
+                      updateWorkspace(workspace.workspace_id, { visibility: "Private" });
+                    }}
+                    onPublic={() => {
+                      setOpenWorkspaceMenuId("");
+                      updateWorkspace(workspace.workspace_id, { visibility: "Public" });
+                    }}
+                    onRename={() => {
+                      setOpenWorkspaceMenuId("");
+                      renameWorkspaceFromMenu(workspace);
+                    }}
+                  />
+                ) : null}
+              </div>
             );
           })}
           {!workspaces.length ? (
@@ -521,6 +658,60 @@ export default function WorkspaceManagement() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+function WorkspaceRowMenu({
+  isFavorite,
+  workspace,
+  onArchive,
+  onDelete,
+  onDuplicate,
+  onFavorite,
+  onPrivate,
+  onPublic,
+  onRename,
+}) {
+  return (
+    <div className="absolute right-2 top-11 z-30 w-64 overflow-hidden rounded-xl border border-[#d6deed] bg-white shadow-[0_18px_50px_rgba(7,24,59,0.18)]">
+      <MenuButton label="Rename" onClick={onRename} />
+      <div className="border-t border-[#edf1f7] px-3 py-2">
+        <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">
+          Change visibility
+        </p>
+        <div className="mt-2 grid gap-1">
+          <MenuButton
+            label="Change to private"
+            onClick={onPrivate}
+            isActive={workspace.visibility === "Private"}
+          />
+          <MenuButton
+            label="Change to public"
+            onClick={onPublic}
+            isActive={workspace.visibility === "Public"}
+          />
+        </div>
+      </div>
+      <MenuButton label={isFavorite ? "Remove from favourites" : "Add to favourites"} onClick={onFavorite} />
+      <MenuButton label="Duplicate" onClick={onDuplicate} />
+      <MenuButton label="Archive" onClick={onArchive} />
+      <MenuButton label="Delete" onClick={onDelete} isDanger />
+    </div>
+  );
+}
+
+function MenuButton({ isActive = false, isDanger = false, label, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm font-semibold transition hover:bg-[#eef6ff] ${
+        isDanger ? "text-[#DF2F4A]" : "text-[#2f3442]"
+      }`}
+    >
+      <span>{label}</span>
+      {isActive ? <span className="text-xs text-[#667085]">✓</span> : null}
+    </button>
   );
 }
 
@@ -764,13 +955,13 @@ function GroupSettingsPopover({
   onTitleChange,
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#07183b]/10 p-4">
-      <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-white/55 bg-white/72 text-[#2f3442] shadow-[0_24px_70px_rgba(7,24,59,0.24)] backdrop-blur-2xl">
-        <div className="flex items-start justify-between gap-4 border-b border-white/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#BBE1FA]/45 p-6">
+      <div className="w-full max-w-5xl overflow-hidden rounded-3xl border border-white/70 bg-[#BBE1FA]/78 text-[#07183b] shadow-[0_28px_90px_rgba(7,24,59,0.26)] backdrop-blur-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-white/70 p-5">
           <input
             value={title}
             onChange={(event) => onTitleChange(event.target.value)}
-            className="h-12 min-w-0 flex-1 rounded-lg border border-[#c4ccdc] bg-white/80 px-4 text-xl font-bold outline-none focus:border-[#07183b]"
+            className="h-12 min-w-0 flex-1 rounded-lg border border-[#c4ccdc] bg-white/82 px-4 text-xl font-bold outline-none focus:border-[#07183b]"
             aria-label="Group name"
           />
           <button
@@ -782,10 +973,10 @@ function GroupSettingsPopover({
           </button>
         </div>
 
-        <div className="p-4">
+        <div className="grid gap-5 p-5 lg:grid-cols-[280px_minmax(0,1fr)]">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">Color</p>
-            <div className="mt-3 flex gap-3">
+            <div className="mt-3 flex flex-wrap gap-3">
               {colors.map((option) => (
                 <button
                   key={option}
@@ -801,9 +992,9 @@ function GroupSettingsPopover({
             </div>
           </div>
 
-          <div className="mt-5">
+          <div>
             <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">Columns</p>
-            <div className="mt-3 divide-y divide-[#edf1f7] overflow-hidden rounded-xl border border-[#edf1f7] bg-white/72">
+            <div className="mt-3 grid gap-2 rounded-xl border border-white/70 bg-white/62 p-2 sm:grid-cols-2">
               {availableColumns.map((column) => {
                 const isEnabled = columns.includes(column);
                 const isLocked = column === "Task";
@@ -814,7 +1005,7 @@ function GroupSettingsPopover({
                     type="button"
                     disabled={isLocked}
                     onClick={() => onColumnToggle(column)}
-                    className="flex w-full items-center justify-between gap-4 px-4 py-2.5 text-left text-sm font-bold disabled:cursor-not-allowed disabled:opacity-70"
+                    className="flex w-full items-center justify-between gap-4 rounded-lg bg-white/75 px-3 py-2 text-left text-sm font-bold shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     <span>{column}</span>
                     <span

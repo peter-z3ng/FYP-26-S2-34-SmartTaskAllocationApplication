@@ -148,24 +148,82 @@ export async function PATCH(request) {
       return NextResponse.json({ error: authError }, { status: 403 });
     }
 
-    const { workspaceId, workspaceName } = await request.json();
+    const { workspaceId, workspaceName, visibility, status } = await request.json();
     const cleanedName = cleanString(workspaceName);
 
     if (!workspaceId) {
       return NextResponse.json({ error: "Workspace ID is required." }, { status: 400 });
     }
 
-    if (!cleanedName) {
-      return NextResponse.json({ error: "Workspace name is required." }, { status: 400 });
+    const updateValues = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (workspaceName !== undefined) {
+      if (!cleanedName) {
+        return NextResponse.json({ error: "Workspace name is required." }, { status: 400 });
+      }
+
+      updateValues.workspace_name = cleanedName;
+    }
+
+    if (visibility !== undefined) {
+      const cleanedVisibility = cleanString(visibility);
+
+      if (!["Private", "Public"].includes(cleanedVisibility)) {
+        return NextResponse.json({ error: "Visibility must be Private or Public." }, { status: 400 });
+      }
+
+      updateValues.visibility = cleanedVisibility;
+    }
+
+    if (status !== undefined) {
+      const cleanedStatus = cleanString(status);
+
+      if (!["Active", "Archived"].includes(cleanedStatus)) {
+        return NextResponse.json({ error: "Status must be Active or Archived." }, { status: 400 });
+      }
+
+      updateValues.status = cleanedStatus;
     }
 
     const accountUserId = await getAccountUserId(supabase, user);
     const { error } = await supabase
       .from("workspace")
-      .update({
-        workspace_name: cleanedName,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateValues)
+      .eq("workspace_id", workspaceId)
+      .eq("created_by", accountUserId);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request) {
+  try {
+    const supabase = getSupabaseAdminClient();
+    const { user, error: authError } = await requireManager(request, supabase);
+
+    if (authError) {
+      return NextResponse.json({ error: authError }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const workspaceId = searchParams.get("workspaceId");
+
+    if (!workspaceId) {
+      return NextResponse.json({ error: "Workspace ID is required." }, { status: 400 });
+    }
+
+    const accountUserId = await getAccountUserId(supabase, user);
+    const { error } = await supabase
+      .from("workspace")
+      .delete()
       .eq("workspace_id", workspaceId)
       .eq("created_by", accountUserId);
 
