@@ -600,7 +600,7 @@ function TaskGroup({
 
   return (
     <section className="mb-10 w-max min-w-full">
-      <div className="relative mb-3 inline-flex">
+      <div className="mb-3 inline-flex">
         <button
           type="button"
           onClick={() => setIsGroupSettingsOpen((current) => !current)}
@@ -610,21 +610,21 @@ function TaskGroup({
           <span className="text-xl">⌄</span>
           {title}
         </button>
-
-        {isGroupSettingsOpen ? (
-          <GroupSettingsPopover
-            availableColumns={availableColumns}
-            color={color}
-            colors={groupColors}
-            columns={columns}
-            title={title}
-            onClose={() => setIsGroupSettingsOpen(false)}
-            onColorChange={onColorChange}
-            onColumnToggle={onColumnToggle}
-            onTitleChange={onGroupNameChange}
-          />
-        ) : null}
       </div>
+
+      {isGroupSettingsOpen ? (
+        <GroupSettingsPopover
+          availableColumns={availableColumns}
+          color={color}
+          colors={groupColors}
+          columns={columns}
+          title={title}
+          onClose={() => setIsGroupSettingsOpen(false)}
+          onColorChange={onColorChange}
+          onColumnToggle={onColumnToggle}
+          onTitleChange={onGroupNameChange}
+        />
+      ) : null}
 
       <div className="overflow-visible bg-white">
         <div
@@ -764,73 +764,83 @@ function GroupSettingsPopover({
   onTitleChange,
 }) {
   return (
-    <div className="absolute left-0 top-12 z-30 w-96 rounded-xl border border-[#d6deed] bg-white p-4 text-[#2f3442] shadow-[0_18px_50px_rgba(7,24,59,0.18)]">
-      <div className="flex items-start justify-between gap-3">
-        <input
-          value={title}
-          onChange={(event) => onTitleChange(event.target.value)}
-          className="h-11 min-w-0 flex-1 rounded-md border border-[#c4ccdc] px-3 text-lg font-bold outline-none focus:border-[#07183b]"
-          aria-label="Group name"
-        />
-        <button
-          type="button"
-          onClick={onClose}
-          className="h-10 rounded-md px-3 text-sm font-bold text-[#667085] hover:bg-[#eef2f8]"
-        >
-          Close
-        </button>
-      </div>
-
-      <div className="mt-4">
-        <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">Color</p>
-        <div className="mt-2 flex gap-2">
-          {colors.map((option) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => onColorChange(option)}
-              className={`h-8 w-8 rounded-full border-2 ${
-                color === option ? "border-[#07183b]" : "border-transparent"
-              }`}
-              style={{ backgroundColor: option }}
-              aria-label={`Use ${option} group color`}
-            />
-          ))}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#07183b]/10 p-4">
+      <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-white/55 bg-white/72 text-[#2f3442] shadow-[0_24px_70px_rgba(7,24,59,0.24)] backdrop-blur-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-white/60 p-4">
+          <input
+            value={title}
+            onChange={(event) => onTitleChange(event.target.value)}
+            className="h-12 min-w-0 flex-1 rounded-lg border border-[#c4ccdc] bg-white/80 px-4 text-xl font-bold outline-none focus:border-[#07183b]"
+            aria-label="Group name"
+          />
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-12 rounded-lg px-4 text-base font-bold text-[#667085] hover:bg-white/70"
+          >
+            Close
+          </button>
         </div>
-      </div>
 
-      <div className="mt-5">
-        <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">Columns</p>
-        <div className="mt-2 divide-y divide-[#edf1f7] rounded-lg border border-[#edf1f7]">
-          {availableColumns.map((column) => {
-            const isEnabled = columns.includes(column);
-            const isLocked = column === "Task";
-
-            return (
-              <button
-                key={column}
-                type="button"
-                disabled={isLocked}
-                onClick={() => onColumnToggle(column)}
-                className="flex w-full items-center justify-between gap-4 px-3 py-3 text-left text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                <span>{column}</span>
-                <span
-                  className={`flex h-6 w-11 items-center rounded-full p-0.5 transition ${
-                    isEnabled ? "bg-[#07183b]" : "bg-[#d8e0ee]"
+        <div className="p-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">Color</p>
+            <div className="mt-3 flex gap-3">
+              {colors.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => onColorChange(option)}
+                  className={`h-10 w-10 rounded-full border-4 ${
+                    color === option ? "border-[#07183b]" : "border-transparent"
                   }`}
-                >
-                  <span
-                    className={`h-5 w-5 rounded-full bg-white shadow-sm transition ${
-                      isEnabled ? "translate-x-5" : "translate-x-0"
-                    }`}
-                  />
-                </span>
-              </button>
-            );
-          })}
+                  style={{ backgroundColor: option }}
+                  aria-label={`Use ${option} group color`}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-5">
+            <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">Columns</p>
+            <div className="mt-3 divide-y divide-[#edf1f7] overflow-hidden rounded-xl border border-[#edf1f7] bg-white/72">
+              {availableColumns.map((column) => {
+                const isEnabled = columns.includes(column);
+                const isLocked = column === "Task";
+
+                return (
+                  <button
+                    key={column}
+                    type="button"
+                    disabled={isLocked}
+                    onClick={() => onColumnToggle(column)}
+                    className="flex w-full items-center justify-between gap-4 px-4 py-2.5 text-left text-sm font-bold disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    <span>{column}</span>
+                    <span
+                      className={`flex h-6 w-11 items-center rounded-full p-0.5 transition ${
+                        isEnabled ? "bg-[#07183b]" : "bg-[#d8e0ee]"
+                      }`}
+                    >
+                      <span
+                        className={`h-5 w-5 rounded-full bg-white shadow-sm transition ${
+                          isEnabled ? "translate-x-5" : "translate-x-0"
+                        }`}
+                      />
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute inset-0 -z-10"
+        aria-label="Close group settings"
+      />
     </div>
   );
 }
