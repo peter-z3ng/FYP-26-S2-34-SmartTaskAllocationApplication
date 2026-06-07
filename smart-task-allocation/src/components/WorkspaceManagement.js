@@ -650,10 +650,10 @@ export default function WorkspaceManagement() {
       </section>
 
       {isWorkspaceDetailsOpen && currentWorkspace ? (
-        <div className="fixed inset-0 z-40 bg-black/20 p-6 backdrop-blur-sm">
+        <div className="absolute left-98 top-10 z-50">
           <form
             onSubmit={updateWorkspaceName}
-            className="mx-auto mt-20 w-full max-w-2xl rounded-2xl bg-white p-6 shadow-[0_24px_80px_rgba(7,24,59,0.22)]"
+            className="mx-auto mt-20 w-full max-w-2xl rounded-2xl border border-white/60 bg-white/20 p-6 shadow-[0_24px_80px_rgba(7,24,59,0.22)] backdrop-blur-sm"
           >
             <div className="flex items-start justify-between gap-4">
               <input
@@ -706,7 +706,7 @@ function WorkspaceRowMenu({
   onRename,
 }) {
   return (
-    <div className="absolute right-2 top-11 z-30 w-64 overflow-hidden rounded-xl border border-[#d6deed] bg-white shadow-[0_18px_50px_rgba(7,24,59,0.18)]">
+    <div className="absolute right-3 top-13 z-30 w-60 overflow-hidden rounded-xl border border-white/60 bg-white/20 shadow-[0_18px_50px_rgba(7,24,59,0.18)] backdrop-blur-sm">
       <MenuButton label="Rename" onClick={onRename} />
       <div className="border-t border-[#edf1f7] px-3 py-2">
         <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">
@@ -989,7 +989,7 @@ function GroupSettingsPopover({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#BBE1FA]/45 p-6">
-      <div className="w-full max-w-5xl overflow-hidden rounded-3xl border border-white/70 bg-[#BBE1FA]/78 text-[#07183b] shadow-[0_28px_90px_rgba(7,24,59,0.26)] backdrop-blur-2xl">
+      <div className="w-full max-w-5xl overflow-hidden rounded-3xl border border-white/60 bg-white/20 text-[#07183b] shadow-[0_28px_90px_rgba(7,24,59,0.26)] backdrop-blur-sm">
         <div className="flex items-start justify-between gap-4 border-b border-white/70 p-5">
           <input
             value={title}
@@ -1427,13 +1427,13 @@ function PeoplePickerCell({ employees, selectedUserId, onAssign }) {
       </button>
 
       {isOpen ? (
-        <div className="absolute left-2 top-12 z-30 w-96 rounded-xl border border-[#d6deed] bg-white p-3 shadow-[0_18px_50px_rgba(7,24,59,0.18)]">
+        <div className="absolute left-2 top-13 z-30 w-96 rounded-xl border border-white/60 bg-white/20 p-3 shadow-[0_18px_50px_rgba(7,24,59,0.18)] backdrop-blur-sm">
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search by name, department or skill"
             autoFocus
-            className="h-11 w-full rounded-md border border-[#c4ccdc] px-3 text-sm text-[#2f3442] outline-none focus:border-[#07183b]"
+            className="h-11 w-full rounded-md border border-black/30 bg-white/80 px-3 text-sm text-[#2f3442] outline-none focus:border-[#1E40AF]"
           />
 
           <div className="mt-4 border-b border-[#e3e9f3] pb-3">

@@ -206,7 +206,7 @@ export default function TopInformationBar({ actor }) {
         </button>
 
         {isNotificationsOpen ? (
-          <div className="absolute right-0 top-12 w-80 rounded-xl border border-[#d8e0ee] bg-white p-3 shadow-[0_18px_60px_rgba(7,24,59,0.16)]">
+          <div className="absolute right-0 top-12 w-80 rounded-xl border border-white/60 bg-white/20 p-3 shadow-[0_18px_60px_rgba(7,24,59,0.16)] backdrop-blur-sm">
             <div className="flex items-center justify-between px-1">
               <p className="font-bold text-[#07183b]">Notifications</p>
               <span className="rounded-full bg-[#eef6ff] px-2 py-1 text-xs font-bold text-[#0a2a66]">
@@ -239,7 +239,7 @@ export default function TopInformationBar({ actor }) {
           </button>
 
           {isProfileOpen ? (
-            <div className="absolute right-0 top-14 w-72 rounded-xl border border-[#d8e0ee] bg-white p-3 shadow-[0_18px_60px_rgba(7,24,59,0.16)]">
+            <div className="absolute right-0 top-14 w-72 rounded-xl border border-white/60 bg-white/20 p-3 shadow-[0_18px_60px_rgba(7,24,59,0.16)] backdrop-blur-lg">
               <div className="rounded-lg bg-[#f8faff] p-3">
                 <p className="text-sm font-bold text-[#07183b]">{profile.name}</p>
                 <p className="mt-1 truncate text-xs text-[#61708a]">{profile.email}</p>

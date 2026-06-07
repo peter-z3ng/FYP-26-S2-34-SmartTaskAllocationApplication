@@ -97,8 +97,8 @@ export default function SideMenuLayout({ actor, children }) {
     <main className="h-screen overflow-hidden bg-[#C7DDEB] text-[#07183b]">
       <TopInformationBar actor={actor} />
       <div className="flex h-[calc(100vh-3.5rem)] w-full gap-2 overflow-hidden bg-[#C7DDEB] pl-1 pb-2 pr-2 sm:pb-2 sm:pl-2 sm:pr-2 lg:pb-2 lg:pl-2 lg:pr-2">
-        <div className="hidden w-16 shrink-0 flex-col z-10 justify-between md:flex">
-          <aside className="group flex w-16 flex-col items-center ml-0.5 rounded-[34px] bg-white/40 py-6 backdrop-blur-sm shadow-sm transition-all duration-300 hover:w-56">
+        <div className="hidden w-16 shrink-0 flex-col z-50 justify-between md:flex">
+          <aside className="group flex w-16 flex-col items-center rounded-[34px] bg-white/20 border border-white/60 py-6 backdrop-blur-sm shadow-sm transition-all duration-300 hover:w-56">
             <div className="flex w-full flex-col items-center gap-8">
 
               <nav
@@ -117,8 +117,8 @@ export default function SideMenuLayout({ actor, children }) {
                       aria-current={isActive ? "page" : undefined}
                       className={`flex h-12 w-full items-center gap-3 rounded-full px-3 transition-colors ${
                         isActive
-                          ? "bg-[#0a2a66] text-white shadow-[0_10px_24px_rgba(10,42,102,0.22)]"
-                          : "text-[#07183b] hover:bg-[#eef2f8]"
+                          ? "bg-[#0D1E4C] text-white shadow-[0_10px_24px_rgba(10,42,102,0.22)]"
+                          : "text-[#0D1E4C] hover:bg-white/40"
                       }`}
                     >
                       <NavIcon name={item.icon} />
