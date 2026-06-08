@@ -374,7 +374,7 @@ function OrganizationChart({
   onDrop,
 }) {
   return (
-    <div className="min-h-full rounded-[32px] bg-[#fffafa] px-8 py-8">
+    <div className="min-h-full rounded-[32px] px-8 py-8">
       <div className="text-center">
         <button
           type="button"
@@ -400,9 +400,9 @@ function OrganizationChart({
                 key={department.department_id}
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={(event) => onDrop(event, department.department_id)}
-                className="flex min-h-[440px] w-64 shrink-0 flex-col rounded-[24px] border border-[#d6deed] bg-white/80 shadow-sm"
+                className="flex min-h-[440px] w-64 shrink-0 flex-col rounded-[24px] border-t border-white/60 bg-gradient-to-b from-[#d8efff] via-[#f8fcff] via-white to-white shadow-xs"
               >
-                <div className="border-b border-[#d6deed] px-4 py-4 text-center">
+                <div className="px-4 py-4 text-center">
                   <h2 className="truncate text-lg font-bold text-[#061a40]">
                     {department.department_name}
                   </h2>
@@ -427,11 +427,7 @@ function OrganizationChart({
                     </button>
                   ))}
 
-                  {!departmentAccounts.length ? (
-                    <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-[#bfd0e8] px-4 text-center text-sm font-medium text-[#667085]">
-                      Drop users here
-                    </div>
-                  ) : null}
+                  
                 </div>
               </section>
             );
