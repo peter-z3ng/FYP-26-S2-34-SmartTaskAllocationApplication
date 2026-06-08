@@ -263,117 +263,31 @@ export default function WorkflowDashboard({ embedded = false }) {
 
     try {
       const supabase = getSupabaseBrowserClient();
-      async function required(query) {
-        const result = await query;
-        if (result.error) throw result.error;
-        return result.data ?? [];
-      }
-
-      async function optional(query) {
-        const result = await query;
-        return result.error ? [] : result.data ?? [];
-      }
-
-      const [
-        organizations,
-        roles,
-        users,
-        profiles,
-        skills,
-        userSkills,
-        qualifications,
-        userQualifications,
-        tasks,
-        taskSkills,
-        taskQualifications,
-        assignments,
-        requests,
-        availability,
-        activityLogs,
-      ] = await Promise.all([
-        required(supabase.from("organization").select("*").order("created_at", { ascending: true })),
-        required(supabase.from("role").select("*").order("role_id", { ascending: true })),
-        required(supabase.from("user_account").select("*").order("created_at", { ascending: false })),
-        optional(supabase.from("profile").select("*")),
-        optional(supabase.from("skill").select("*").order("skill_name")),
-        optional(supabase.from("user_skill").select("*")),
-        optional(supabase.from("qualification").select("*").order("qualification_name")),
-        optional(supabase.from("user_qualification").select("*")),
-        required(supabase.from("task").select("*").order("created_at", { ascending: false })),
-        optional(supabase.from("task_skill").select("*")),
-        optional(supabase.from("task_qualification").select("*")),
-        required(supabase.from("task_assignment").select("*").order("assigned_at", { ascending: false })),
-        optional(supabase.from("task_assignment_request").select("*").order("requested_at", { ascending: false })),
-        optional(supabase.from("availability").select("*")),
-        optional(supabase.from("activity_log").select("*").order("created_at", { ascending: false }).limit(10)),
-      ]);
-
-      const nextData = {
-        organizations,
-        roles,
-        users,
-        profiles,
-        skills,
-        userSkills,
-        qualifications,
-        userQualifications,
-        tasks,
-        taskSkills,
-        taskQualifications,
-        assignments,
-        requests,
-        availability,
-        activityLogs,
-      };
-
       const { data: sessionData } = await supabase.auth.getSession();
-      const signedInUserId = sessionData.session?.user?.id;
-      let signedInAccount = signedInUserId
-        ? nextData.users.find((user) => user.user_id === signedInUserId)
-        : null;
-      let serverOrganizations = [];
-      let serverUsers = [];
 
-      if (sessionData.session?.access_token) {
-        const meResponse = await fetch("/api/me", {
-          headers: {
-            Authorization: `Bearer ${sessionData.session.access_token}`,
-          },
-        });
-        if (meResponse.ok) {
-          const me = await meResponse.json();
-          signedInAccount = me.account ?? signedInAccount;
-        }
-
-        const organizationResponse = await fetch("/api/organizations", {
-          headers: {
-            Authorization: `Bearer ${sessionData.session.access_token}`,
-          },
-        });
-        if (organizationResponse.ok) {
-          const organizationResult = await organizationResponse.json();
-          serverOrganizations = organizationResult.organizations ?? [];
-        }
-
-        const usersResponse = await fetch("/api/users", {
-          headers: {
-            Authorization: `Bearer ${sessionData.session.access_token}`,
-          },
-        });
-        if (usersResponse.ok) {
-          const usersResult = await usersResponse.json();
-          serverUsers = usersResult.users ?? [];
-        }
+      if (!sessionData.session?.access_token) {
+        setCurrentAccount(null);
+        setActiveRoleId((currentRoleId) => currentRoleId || FALLBACK_ROLES[0].role_id);
+        return;
       }
 
-      setData({
-        ...nextData,
-        users: serverUsers.length ? serverUsers : nextData.users,
-        organizations: serverOrganizations.length ? serverOrganizations : nextData.organizations,
+      const response = await fetch("/api/dashboard-data", {
+        headers: {
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+        },
       });
-      setCurrentAccount(signedInAccount ?? null);
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Unable to load dashboard records.");
+      }
+
+      const nextData = result.data;
+
+      setData(nextData);
+      setCurrentAccount(result.currentAccount ?? null);
       setActiveRoleId((currentRoleId) =>
-        signedInAccount?.role_id ?? currentRoleId ?? nextData.roles[0]?.role_id ?? FALLBACK_ROLES[0].role_id,
+        result.currentAccount?.role_id ?? currentRoleId ?? nextData.roles[0]?.role_id ?? FALLBACK_ROLES[0].role_id,
       );
       setSelectedTaskId((currentTaskId) => currentTaskId || nextData.tasks[0]?.task_id || "");
     } catch (loadError) {
@@ -680,7 +594,7 @@ export default function WorkflowDashboard({ embedded = false }) {
     <main
       className={
         embedded
-          ? "h-full min-h-0 overflow-y-auto text-[#07183b]"
+          ? "min-h-full text-[#07183b]"
           : "min-h-screen bg-[var(--background)] text-[var(--foreground)]"
       }
     >
@@ -702,45 +616,32 @@ export default function WorkflowDashboard({ embedded = false }) {
         {error ? <p className="mb-4 rounded-md border border-[#EF4444]/30 bg-[var(--optima-danger-bg)] px-4 py-3 text-sm font-semibold text-[var(--optima-danger)]">{error}</p> : null}
         {message ? <p className="mb-4 rounded-md border border-[#10B981]/30 bg-[var(--optima-success-bg)] px-4 py-3 text-sm font-semibold text-[var(--optima-success)]">{message}</p> : null}
 
-        <section className={embedded ? "mb-6 grid gap-6 lg:grid-cols-2" : "mb-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]"}>
+        <section className={embedded ? "mb-6 grid gap-6 lg:grid-cols-2" : "mb-6 grid gap-4 lg:grid-cols-2"}>
           <div className={embedded ? "rounded-2xl bg-white p-6 shadow-sm" : "rounded-lg border border-[var(--optima-border)] bg-[var(--optima-surface)] p-5 shadow-sm"}>
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h2 className={embedded ? "text-xl font-bold text-[#07183b]" : "text-xl font-black text-[var(--optima-primary)]"}>{organization?.organization_name ?? "Organisation not created"}</h2>
+                <h2 className={embedded ? "text-xl font-bold text-[#07183b]" : "text-xl font-black text-[var(--optima-primary)]"}>
+                  Workspace Overview
+                </h2>
                 <p className={embedded ? "mt-2 max-w-2xl text-sm leading-6 text-[#52627a]" : "mt-1 max-w-2xl text-sm leading-6 text-[var(--optima-muted)]"}>
-                  Database-backed employee management, task allocation, availability checking, schedule updates, and allocation history.
+                  A platform summary area for organisations, users, roles, and active accounts.
                 </p>
               </div>
-              {organization?.organization_code ? <Chip>{organization.organization_code}</Chip> : null}
-            </div>
-            <div className="mt-5 grid gap-3 sm:grid-cols-4">
-              <Metric label="Users" value={enrichedUsers.length} />
-              <Metric label="Open Tasks" value={data.tasks.filter((task) => task.status === "Open").length} />
-              <Metric label="Assignments" value={data.assignments.length} />
-              <Metric label="Requests" value={data.requests.filter((request) => request.status === "Pending").length} />
+              {!isPlatformAdmin && organization?.organization_code ? <Chip>{organization.organization_code}</Chip> : null}
             </div>
           </div>
 
           <div className={embedded ? "rounded-2xl bg-white p-6 shadow-sm" : "rounded-lg border border-[var(--optima-border)] bg-[var(--optima-surface)] p-5 shadow-sm"}>
-            <h2 className={embedded ? "text-xl font-bold text-[#07183b]" : "text-lg font-bold text-[var(--optima-primary)]"}>Your Access</h2>
-            {currentAccount ? (
-              <div className="mt-3 rounded-md bg-[var(--optima-surface-muted)] p-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-[var(--optima-secondary)]">Signed in role</p>
-                <p className="mt-1 text-xl font-black text-[var(--optima-primary)]">{activeRole || "Role not assigned"}</p>
-                <p className="mt-2 text-sm text-[var(--optima-muted)]">{currentAccount.username || currentAccount.email}</p>
-              </div>
-            ) : (
-              <>
-                <p className="mt-1 text-sm text-[var(--optima-muted)]">Log in to use your assigned role. This selector is only for previewing screens while developing.</p>
-                <SelectInput className="mt-4" value={activeRoleId} onChange={(event) => setActiveRoleId(Number(event.target.value))}>
-                  {roles.map((role) => (
-                    <option key={role.role_id} value={role.role_id}>
-                      {role.role_name}
-                    </option>
-                  ))}
-                </SelectInput>
-              </>
-            )}
+            <h2 className={embedded ? "text-xl font-bold text-[#07183b]" : "text-lg font-bold text-[var(--optima-primary)]"}>Platform Overview</h2>
+            <p className={embedded ? "mt-2 max-w-2xl text-sm leading-6 text-[#52627a]" : "mt-1 max-w-2xl text-sm leading-6 text-[var(--optima-muted)]"}>
+              A quick view of platform organisations, users, roles, and account activity.
+            </p>
+            <div className="mt-5 grid gap-3 sm:grid-cols-4">
+              <Metric label="Organisations" value={data.organizations.length} />
+              <Metric label="Users" value={enrichedUsers.length} />
+              <Metric label="Roles" value={roles.length} />
+              <Metric label="Active Accounts" value={enrichedUsers.filter((user) => user.account_status === "Active").length} />
+            </div>
           </div>
         </section>
 
@@ -1116,11 +1017,6 @@ function OrganizationSetupPanel({
 }
 
 function RoleAdminPanel({ roles, organizations, currentAccount, newRole, setNewRole, createRole, showRoleForm, setShowRoleForm }) {
-  function startCreateRole() {
-    setNewRole(EMPTY_ROLE);
-    setShowRoleForm(true);
-  }
-
   function startEditRole(role) {
     setNewRole({
       role_id: role.role_id,
@@ -1143,12 +1039,9 @@ function RoleAdminPanel({ roles, organizations, currentAccount, newRole, setNewR
     <Section id="roles" title="Role Management">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <p className="max-w-2xl text-sm leading-6 text-[var(--optima-muted)]">
-          Roles define what a type of user can do. Creating a person with a name and assigning them a role happens in the Create Account form below.
+          Roles define what a type of user can do. Edit each role to maintain its permissions description.
           {currentOrganization ? ` Current organisation: ${currentOrganization.organization_name}.` : ""}
         </p>
-        <PrimaryButton type="button" onClick={startCreateRole}>
-          Create Role
-        </PrimaryButton>
       </div>
 
       {showRoleForm ? (
@@ -1183,7 +1076,7 @@ function RoleAdminPanel({ roles, organizations, currentAccount, newRole, setNewR
             </SelectInput>
           </Field>
           <div className="flex items-end gap-2">
-            <PrimaryButton type="submit">{newRole.role_id ? "Save Changes" : "Save Role"}</PrimaryButton>
+            <PrimaryButton type="submit">Save Changes</PrimaryButton>
             <SecondaryButton type="button" onClick={cancelRoleForm}>Cancel</SecondaryButton>
           </div>
           <label className="space-y-1.5 text-sm font-semibold text-[var(--optima-primary)] lg:col-span-3">

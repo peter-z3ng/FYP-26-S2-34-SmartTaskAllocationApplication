@@ -158,7 +158,7 @@ export default function SideMenuLayout({ actor, children }) {
           </aside>
         </div>
           
-        <div className="min-h-0 min-w-0 flex-1">
+        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto pb-8 pr-1">
           {children}
         </div>
       </div>

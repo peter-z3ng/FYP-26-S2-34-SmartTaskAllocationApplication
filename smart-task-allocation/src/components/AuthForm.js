@@ -1,20 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseClient";
 
-export default function AuthForm() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+export default function AuthForm({ initialEmail = "", initialPassword = "" }) {
+  const [email, setEmail] = useState(initialEmail);
+  const [password, setPassword] = useState(initialPassword);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
+    setMessage("Signing in...");
     setIsSubmitting(true);
 
     try {
@@ -26,9 +26,11 @@ export default function AuthForm() {
 
       if (authError) {
         setError(authError.message);
+        setMessage("");
         return;
       }
 
+      setMessage("Login succeeded. Opening your dashboard...");
       const { data: sessionData } = await supabase.auth.getSession();
       const routeResponse = await fetch("/api/home-route", {
         headers: {
@@ -39,13 +41,14 @@ export default function AuthForm() {
 
       if (!routeResponse.ok) {
         setError(`Login succeeded, but ${routeResult.error}`);
+        setMessage("");
         return;
       }
 
-      router.push(routeResult.homeRoute);
-      router.refresh();
+      window.location.assign(routeResult.homeRoute);
     } catch (authError) {
       setError(authError.message);
+      setMessage("");
     } finally {
       setIsSubmitting(false);
     }
@@ -55,7 +58,12 @@ export default function AuthForm() {
     <section className="w-full max-w-xl rounded-[28px] border border-white bg-white/85 px-8 py-10 shadow-[0_28px_80px_rgba(15,42,92,0.18)] sm:px-10">
       <h1 className="text-center text-3xl font-bold text-[#061a40]">Log in</h1>
 
-      <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+      <form
+        action="/api/login"
+        method="post"
+        onSubmit={handleSubmit}
+        className="mt-8 space-y-6"
+      >
         <div className="space-y-3">
           <label htmlFor="email" className="block text-base font-medium text-[#061a40]">
             Email
@@ -92,6 +100,12 @@ export default function AuthForm() {
         {error ? (
           <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
             {error}
+          </p>
+        ) : null}
+
+        {message ? (
+          <p className="rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-[#0a2a66]">
+            {message}
           </p>
         ) : null}
 
