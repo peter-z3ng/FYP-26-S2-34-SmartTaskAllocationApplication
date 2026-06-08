@@ -30,24 +30,26 @@ export default function Home() {
           </Link>
         </header>
 
-        <LaserFlow
-          horizontalBeamOffset={0.1}
-          verticalBeamOffset={0}
-          horizontalSizing={0.5}
-          verticalSizing={4}
-          wispDensity={1}
-          wispSpeed={15}
-          wispIntensity={5}
-          flowSpeed={0.35}
-          flowStrength={0.25}
-          fogIntensity={0.45}
-          fogScale={0.3}
-          fogFallSpeed={0.6}
-          decay={1.1}
-          falloffStart={1.2}
-          color="#2563EB"
-          className="absolute inset-0 translate-y-14"
-        />
+        <div className="absolute left-1/2 -top-20 z-[4] h-[126vh] min-h-[360px] w-screen -translate-x-1/2 overflow-hidden">
+          <LaserFlow
+            horizontalBeamOffset={0.1}
+            verticalBeamOffset={0}
+            horizontalSizing={1}
+            verticalSizing={1.5}
+            wispDensity={1}
+            wispSpeed={15}
+            wispIntensity={20}
+            flowSpeed={0.35}
+            flowStrength={0.25}
+            fogIntensity={2}
+            fogScale={0.3}
+            fogFallSpeed={0.6}
+            decay={1.1}
+            falloffStart={1.2}
+            color="#2563EB"
+            className="absolute inset-0 translate-y-14"
+          />
+        </div>
 
         <div className="absolute ml-30 top-[22%] z-10 max-w-[780px]">
           <h1 className="text-balance text-4xl font-black leading-[0.95] tracking-normal text-white md:text-6xl">
@@ -57,7 +59,7 @@ export default function Home() {
 
         <section
           aria-label="Dashboard preview"
-          className="absolute left-1/2 top-1/2 z-[6] h-[60%] w-[86%] -translate-x-1/2 overflow-hidden rounded-[20px] border-2 border-[#2563EB] bg-[#120F17] shadow-[0_0_90px_rgba(37,99,235,0.9)]"
+          className="absolute left-1/2 top-[60vh] z-[6] h-[52vh] min-h-[360px] w-[86%] -translate-x-1/2 overflow-hidden rounded-t-[20px] border-2 border-[#2563EB] bg-[#120F17] shadow-[0_0_90px_rgba(37,99,235,0.9)]"
         />
       </section>
 
