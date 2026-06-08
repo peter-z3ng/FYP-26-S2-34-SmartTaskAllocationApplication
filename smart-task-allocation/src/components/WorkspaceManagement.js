@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import BorderGlow from "@/components/BorderGlow";
 import { getSupabaseBrowserClient } from "@/lib/supabaseClient";
+import { Radar } from "@/components/ui/radar-effect";
 
 const emptyTask = {
   taskId: "",
@@ -42,6 +44,7 @@ export default function WorkspaceManagement() {
   const [form, setForm] = useState(emptyTask);
   const [error, setError] = useState("");
   const [isAddingTask, setIsAddingTask] = useState(false);
+  const [isTaskOverlayOpen, setIsTaskOverlayOpen] = useState(false);
   const [workspaces, setWorkspaces] = useState([]);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [workspaceName, setWorkspaceName] = useState("");
@@ -337,6 +340,7 @@ export default function WorkspaceManagement() {
 
       setForm(emptyTask);
       setIsAddingTask(false);
+      setIsTaskOverlayOpen(false);
       await loadTasks();
     } catch (saveError) {
       setError(saveError.message);
@@ -446,7 +450,8 @@ export default function WorkspaceManagement() {
 
   function startNewTask() {
     setForm(emptyTask);
-    setIsAddingTask(true);
+    setIsAddingTask(false);
+    setIsTaskOverlayOpen(true);
   }
 
   function toggleColumn(column) {
@@ -466,13 +471,13 @@ export default function WorkspaceManagement() {
 
   return (
     <div
-      className={`grid h-full min-h-0 overflow-hidden rounded-2xl border border-[#d6deed] bg-white shadow-sm transition-[grid-template-columns] ${
+      className={`grid h-full min-h-0 overflow-hidden rounded-2xl border border-[#BBE1FA] bg-white shadow-sm transition-[grid-template-columns] ${
         isWorkspaceSidebarCollapsed
           ? "lg:grid-cols-[40px_minmax(0,1fr)]"
           : "lg:grid-cols-[300px_minmax(0,1fr)]"
       }`}
     >
-      <aside className="relative overflow-visible border-b border-[#d6deed] bg-[#BBE1FA] p-4 lg:border-b-0 lg:border-r">
+      <aside className="relative overflow-visible bg-[#BBE1FA] px-3 py-4 shadow-md shadow-[#2563EB]">
         <button
           type="button"
           onClick={() => setIsWorkspaceSidebarCollapsed((current) => !current)}
@@ -618,6 +623,7 @@ export default function WorkspaceManagement() {
 
         <div className="min-h-0 flex-1 overflow-auto px-6 py-6">
           {currentWorkspace ? (
+            <>
             <TaskGroup
               availableColumns={defaultColumns}
               color={groupColor}
@@ -643,6 +649,22 @@ export default function WorkspaceManagement() {
               onTaskUpdate={updateTask}
               onStatusChange={updateTaskStatus}
             />
+            {isTaskOverlayOpen ? (
+              <TaskCreationOverlay
+                columns={columns}
+                currentWorkspace={currentWorkspace}
+                employees={employees}
+                form={form}
+                groupTitle={groupName}
+                onCancel={() => {
+                  setForm(emptyTask);
+                  setIsTaskOverlayOpen(false);
+                }}
+                onSave={saveTask}
+                onUpdateField={updateField}
+              />
+            ) : null}
+            </>
           ) : (
             <TemplatePrompt onCreateBlank={() => createWorkspaceWithName("Blank workspace")} />
           )}
@@ -706,24 +728,24 @@ function WorkspaceRowMenu({
   onRename,
 }) {
   return (
-    <div className="absolute right-3 top-13 z-30 w-60 overflow-hidden rounded-xl border border-white/60 bg-white/20 shadow-[0_18px_50px_rgba(7,24,59,0.18)] backdrop-blur-sm">
+    <div className="absolute right-3 top-13 z-30 w-60 overflow-hidden rounded-xl border border-white/20 bg-white/40 shadow-[0_18px_50px_rgba(7,24,59,0.18)] backdrop-blur-md">
       <MenuButton label="Rename" onClick={onRename} />
-      <div className="border-t border-[#edf1f7] px-3 py-2">
+      <div className="border-t border-white/45 px-3 py-3">
         <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">
           Change visibility
         </p>
-        <div className="mt-2 grid gap-1">
-          <MenuButton
-            label="Change to private"
-            onClick={onPrivate}
-            isActive={workspace.visibility === "Private"}
-          />
-          <MenuButton
-            label="Change to public"
-            onClick={onPublic}
-            isActive={workspace.visibility === "Public"}
-          />
-        </div>
+        <MenuButton
+          label="Change to private"
+          onClick={onPrivate}
+          isActive={workspace.visibility === "Private"}
+          isNested
+        />
+        <MenuButton
+          label="Change to public"
+          onClick={onPublic}
+          isActive={workspace.visibility === "Public"}
+          isNested
+        />
       </div>
       <MenuButton label={isFavorite ? "Remove from favourites" : "Add to favourites"} onClick={onFavorite} />
       <MenuButton label="Duplicate" onClick={onDuplicate} />
@@ -733,18 +755,258 @@ function WorkspaceRowMenu({
   );
 }
 
-function MenuButton({ isActive = false, isDanger = false, label, onClick }) {
+function MenuButton({ isActive = false, isDanger = false, isNested = false, label, onClick }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm font-semibold transition hover:bg-[#eef6ff] ${
+      className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm font-semibold transition hover:bg-white/45 ${
         isDanger ? "text-[#DF2F4A]" : "text-[#2f3442]"
-      }`}
+      } ${isNested ? "mt-2 pl-6" : ""}`}
     >
       <span>{label}</span>
       {isActive ? <span className="text-xs text-[#667085]">✓</span> : null}
     </button>
+  );
+}
+
+function OptimusGlowPanel({ children, className = "" }) {
+  return (
+    <BorderGlow
+      animated
+      backgroundColor="transparent"
+      borderRadius={20}
+      className={className}
+      colors={[
+        "#FFFFFF",
+        "#FFF8E1",
+        "#FFD54F",
+        "#FFC107",
+        "#FF8F00",
+      ]}
+      coneSpread={10}
+      edgeSensitivity={90}
+      fillOpacity={0}
+      glowColor="38 100 58"
+      glowIntensity={2}
+      glowRadius={35}
+    >
+      <div
+        className="overflow-hidden rounded-2xl bg-[#E0E5E9]/40 shadow-[0_20px_60px_rgba(0,0,0,0.08)]"
+      >
+        {children}
+      </div>
+    </BorderGlow>
+  );
+}
+
+function RadarPreview({ employees = [] }) {
+  const matchedEmployees = employees.slice(0, 5);
+  const radarItems = [
+    {
+      position: "left-12 top-8",
+      delay: 0.45,
+    },
+    {
+      position: "left-1/2 top-4 -translate-x-1/2",
+      delay: 1.15,
+    },
+    {
+      position: "right-12 top-8",
+      delay: 1.85,
+    },
+    {
+      position: "left-24 bottom-10",
+      delay: 2.55,
+    },
+    {
+      position: "right-24 bottom-10",
+      delay: 3.25,
+    },
+  ];
+
+  return (
+    <div className="relative h-[420px] w-full overflow-hidden rounded-b-2xl bg-[#E0E5E9]/80 backdrop-blur-md shadow-inner">
+      <style>{`
+        @keyframes radar-profile-pop {
+          0% {
+            opacity: 0;
+            transform: translateY(14px) scale(0.72);
+          }
+          70% {
+            opacity: 1;
+            transform: translateY(-2px) scale(1.04);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        .animate-radar-profile-pop {
+          animation: radar-profile-pop 0.5s ease-out both;
+        }
+      `}</style>
+      <Radar className="absolute left-1/2 top-[92%] h-20 w-20 -translate-x-1/2 -translate-y-1/2" />
+      {radarItems.map((item, index) => (
+        <div key={index} className={`absolute ${item.position}`}>
+          <RadarProfileIcon
+            delay={item.delay}
+            employee={matchedEmployees[index]}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RadarProfileIcon({ delay, employee }) {
+  return (
+    <div
+      className="animate-radar-profile-pop relative z-50 flex flex-col items-center gap-2 opacity-0"
+      style={{ animationDelay: `${delay}s` }}
+    >
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#1E40AF] shadow-inner">
+        <svg className="h-9 w-9 text-[#E0E5E9]" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M10 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 1 1 14 0H3Z" />
+        </svg>
+      </div>
+      <span className="max-w-32 truncate rounded-full bg-slate-900/80 px-3 py-1 text-center text-xs font-bold text-slate-300">
+        {employee ? getDisplayName(employee) : "Searching"}
+      </span>
+    </div>
+  );
+}
+
+function OptimusAssistantMenu({ onAutoAssign, onClose }) {
+  const features = ["Auto assign", "Predict workload risk", "Suggest task priority", "Summarize workspace"];
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center px-6 py-8">
+      <OptimusGlowPanel className="w-full max-w-lg backdrop-blur-sm">
+        <div className="flex items-center justify-between gap-3 border-b border-white/35 px-5 py-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">
+              Optimus AI
+            </p>
+            <h3 className="text-2xl font-black">AI features</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/45 text-xl font-black text-[#667085] transition hover:bg-white/70"
+            aria-label="Close Optimus AI"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="grid gap-2 p-4">
+          {features.map((feature) => (
+            <button
+              key={feature}
+              type="button"
+              onClick={() => {
+                if (feature === "Auto assign") {
+                  onAutoAssign();
+                  return;
+                }
+              }}
+              className="rounded-xl px-4 py-3 text-left text-sm font-black text-[#2f3442] transition hover:bg-white/55"
+            >
+              {feature}
+            </button>
+          ))}
+        </div>
+      </OptimusGlowPanel>
+    </div>
+  );
+}
+
+function AutoAssignScanModal({ employees }) {
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center px-8 py-8">
+      <OptimusGlowPanel className="w-full max-w-5xl">
+        <div className="flex items-center justify-between px-6 py-4 text-white bg-[#E0E5E9]/60 backdrop-blur-md">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-wide text-[#0D1E4C]">
+              Optimus
+            </p>
+            <h3 className="text-2xl font-black">Scanning eligible profiles</h3>
+          </div>
+          <p className="text-sm font-semibold text-slate-400">
+            Availability · Skill · Qualification · Department
+          </p>
+        </div>
+        <RadarPreview employees={employees} />
+      </OptimusGlowPanel>
+    </div>
+  );
+}
+
+function EligibleEmployeesDrawer({ employees, onClose }) {
+  const eligibleEmployees = employees.slice(0, 8);
+
+  return (
+    <OptimusGlowPanel className="absolute left-170 top-4 z-[70] w-[380px]">
+      <div className="flex items-start justify-between gap-4 border-b border-white/40 px-5 py-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">
+            Optimus AI
+          </p>
+          <h3 className="text-xl font-black">Eligible employees</h3>
+          <p className="mt-1 text-xs leading-5 text-[#667085]">
+            Drag a profile into an Assigned to field.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-md px-2 py-1 text-sm font-bold text-[#667085] hover:bg-white/55"
+          aria-label="Close eligible employees"
+        >
+          ×
+        </button>
+      </div>
+      <div className="grid max-h-[calc(100vh-13rem)] gap-2 overflow-y-auto p-4">
+        {eligibleEmployees.map((employee) => (
+          <button
+            key={employee.user_id}
+            type="button"
+            draggable
+            onDragStart={(event) => {
+              event.dataTransfer.effectAllowed = "copy";
+              event.dataTransfer.setData(
+                "application/x-optima-employee-id",
+                employee.user_id
+              );
+              event.dataTransfer.setData("text/plain", employee.user_id);
+            }}
+            className="flex cursor-grab items-center gap-3 rounded-2xl border border-white/40 bg-white/60 px-3 py-3 text-left shadow-sm transition hover:bg-white/80 active:cursor-grabbing"
+            title="Drag into an Assigned to field"
+          >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#07183b] text-sm font-black text-white">
+              {getInitials(employee)}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-black text-[#2f3442]">
+                {getDisplayName(employee)}
+              </span>
+              <span className="block truncate text-xs text-[#667085]">
+                {getEmployeeMatchSummary(employee)}
+              </span>
+            </span>
+            <span className="rounded-full bg-[#dbeafe] px-2 py-1 text-xs font-black text-[#1E40AF]">
+              {getEmployeeMatchScore(employee)}%
+            </span>
+          </button>
+        ))}
+        {!eligibleEmployees.length ? (
+          <p className="rounded-2xl border border-dashed border-white/40 px-3 py-10 text-center text-sm font-semibold text-[#667085]">
+            No employees available yet.
+          </p>
+        ) : null}
+      </div>
+    </OptimusGlowPanel>
   );
 }
 
@@ -803,10 +1065,29 @@ function TaskGroup({
   const [dragReadyTaskId, setDragReadyTaskId] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
   const [isGroupSettingsOpen, setIsGroupSettingsOpen] = useState(false);
+  const [isOptimusOpen, setIsOptimusOpen] = useState(false);
+  const [autoAssignView, setAutoAssignView] = useState("closed");
   const [selectedTaskIds, setSelectedTaskIds] = useState(new Set());
   const gridTemplateColumns = `32px 44px ${columns
     .map((column) => (column === "Task" ? "360px" : "190px"))
     .join(" ")}`;
+
+  useEffect(() => {
+    if (autoAssignView !== "scanning") {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      setAutoAssignView("results");
+    }, 5000);
+
+    return () => window.clearTimeout(timer);
+  }, [autoAssignView]);
+
+  function startAutoAssignScan() {
+    setIsOptimusOpen(false);
+    setAutoAssignView("scanning");
+  }
 
   function toggleTaskSelection(taskId) {
     setSelectedTaskIds((current) => {
@@ -824,17 +1105,49 @@ function TaskGroup({
 
   return (
     <section className="mb-10 w-max min-w-full">
-      <div className="mb-3 inline-flex">
+      <div className="mb-3 flex min-w-full items-center justify-between gap-4">
         <button
           type="button"
           onClick={() => setIsGroupSettingsOpen((current) => !current)}
-          className="flex items-center gap-3 rounded-md text-2xl font-bold transition hover:bg-[#eef6ff]"
+          className="sticky left-0 z-30 flex items-center gap-3 rounded-md bg-white/95 pr-4 text-2xl font-bold transition hover:bg-[#eef6ff]"
           style={{ color }}
         >
           <span className="text-xl">⌄</span>
           {title}
         </button>
+        <div className="sticky right-0 z-30 flex shrink-0 items-center gap-2 bg-white/95 pl-4">
+          <div className="relative">
+          <button
+            type="button"
+            onClick={() => setIsOptimusOpen((current) => !current)}
+            className="h-10 rounded-lg border border-[#c4ccdc] bg-white px-4 text-sm font-bold text-[#07183b] shadow-sm transition hover:bg-[#eef6ff]"
+          >
+            Optimus AI
+          </button>
+          {isOptimusOpen ? (
+            <OptimusAssistantMenu
+              onAutoAssign={startAutoAssignScan}
+              onClose={() => setIsOptimusOpen(false)}
+            />
+          ) : null}
+          </div>
+          <button
+            type="button"
+            onClick={onAddTask}
+            className="h-10 rounded-lg bg-[#0a72e8] px-4 text-sm font-bold text-white shadow-sm transition hover:bg-[#075fc2]"
+          >
+            Add Task
+          </button>
+        </div>
       </div>
+
+      {autoAssignView === "scanning" ? <AutoAssignScanModal /> : null}
+      {autoAssignView === "results" ? (
+        <EligibleEmployeesDrawer
+          employees={employees}
+          onClose={() => setAutoAssignView("closed")}
+        />
+      ) : null}
 
       {isGroupSettingsOpen ? (
         <GroupSettingsPopover
@@ -852,13 +1165,18 @@ function TaskGroup({
 
       <div className="overflow-visible bg-white">
         <div
-          className="grid border-b border-[#d6deed] text-sm font-bold text-[#2f3442]"
+          className="sticky top-0 z-30 grid border-b border-[#d6deed] text-sm font-bold text-[#2f3442]"
           style={{ gridTemplateColumns }}
         >
-          <div className="bg-[#fbfcff] p-2" />
-          <div className="bg-[#fbfcff] p-3" />
+          <div className="sticky left-0 z-40 bg-[#fbfcff] p-2" />
+          <div className="sticky left-[32px] z-40 bg-[#fbfcff] p-3" />
           {columns.map((column) => (
-            <div key={column} className="bg-[#fbfcff] p-3">
+            <div
+              key={column}
+              className={`bg-[#fbfcff] p-3 ${
+                column === "Task" ? "sticky left-[76px] z-40" : ""
+              }`}
+            >
               {column}
             </div>
           ))}
@@ -927,9 +1245,9 @@ function TaskGroup({
             className="grid border-b border-[#d6deed] text-sm text-[#667085]"
             style={{ gridTemplateColumns }}
           >
-            <div />
-            <div className="p-3" />
-            <div className="p-3" style={{ gridColumn: `span ${columns.length}` }}>
+          <div className="sticky left-0 z-20 bg-inherit" />
+          <div className="sticky left-[32px] z-20 bg-inherit p-3" />
+          <div className="p-3" style={{ gridColumn: `span ${columns.length}` }}>
               {emptyText}
             </div>
           </div>
@@ -951,10 +1269,10 @@ function TaskGroup({
           className="grid border-b border-[#d6deed] text-sm text-[#667085]"
           style={{ gridTemplateColumns }}
         >
-          <div className="flex items-center justify-center p-2">
+          <div className="sticky left-0 z-20 flex items-center justify-center bg-inherit p-2">
             <span className="text-base font-bold leading-none text-[#CBD5E1]">⋮⋮</span>
           </div>
-          <div className="flex items-center justify-center p-3">
+          <div className="sticky left-[32px] z-20 flex items-center justify-center bg-inherit p-3">
             <input
               type="checkbox"
               className="h-5 w-5 rounded border-[#d6deed] text-[#07183b]"
@@ -1065,6 +1383,187 @@ function GroupSettingsPopover({
         className="absolute inset-0 -z-10"
         aria-label="Close group settings"
       />
+    </div>
+  );
+}
+
+function TaskCreationOverlay({
+  currentWorkspace,
+  employees,
+  form,
+  groupTitle,
+  onCancel,
+  onSave,
+  onUpdateField,
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-6 py-8 backdrop-blur-sm">
+      <form
+        onSubmit={onSave}
+        className="flex max-h-[86vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#17191b] text-white shadow-[0_28px_90px_rgba(0,0,0,0.45)]"
+      >
+        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+          <div className="flex items-center gap-8 text-sm font-bold text-white/45">
+            {["Task", "Doc", "Reminder", "Whiteboard", "Dashboard"].map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                className={`pb-3 transition hover:text-white ${
+                  tab === "Task" ? "border-b-2 border-white text-white" : ""
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-2xl leading-none text-white/70 transition hover:bg-white/15 hover:text-white"
+            aria-label="Close task creation"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+          <div className="flex flex-wrap gap-3">
+            <span className="rounded-md border border-white/10 px-3 py-2 text-sm font-semibold text-white/75">
+              {currentWorkspace?.workspace_name ?? "Workspace"}
+            </span>
+            <span className="rounded-md border border-white/10 px-3 py-2 text-sm font-semibold text-white/75">
+              {groupTitle}
+            </span>
+          </div>
+
+          <input
+            value={form.title}
+            onChange={(event) => onUpdateField("title", event.target.value)}
+            placeholder="Task Name"
+            required
+            autoFocus
+            className="mt-8 h-14 w-full bg-transparent text-3xl font-bold text-white outline-none placeholder:text-white/35"
+          />
+
+          <textarea
+            value={form.description}
+            onChange={(event) => onUpdateField("description", event.target.value)}
+            placeholder="Add description"
+            className="mt-5 min-h-24 w-full resize-none rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-white/45 focus:border-white/30"
+          />
+
+          <button
+            type="button"
+            className="mt-4 rounded-lg px-3 py-2 text-sm font-semibold text-white/60 transition hover:bg-white/10 hover:text-white"
+          >
+            Write with AI
+          </button>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <label className="grid gap-2 text-xs font-bold uppercase tracking-wide text-white/45">
+              Status
+              <select
+                value={form.status}
+                onChange={(event) => onUpdateField("status", event.target.value)}
+                className="h-11 rounded-lg border border-white/10 bg-white/10 px-3 text-sm font-bold text-white outline-none"
+              >
+                <option className="text-[#17191b]">Open</option>
+                <option className="text-[#17191b]">In Progress</option>
+                <option className="text-[#17191b]">Completed</option>
+                <option className="text-[#17191b]">Cancelled</option>
+              </select>
+            </label>
+            <label className="grid gap-2 text-xs font-bold uppercase tracking-wide text-white/45">
+              Assignee
+              <select
+                value={form.assignedTo}
+                onChange={(event) => onUpdateField("assignedTo", event.target.value)}
+                className="h-11 rounded-lg border border-white/10 bg-white/10 px-3 text-sm font-bold text-white outline-none"
+              >
+                <option className="text-[#17191b]" value="">
+                  Unassigned
+                </option>
+                {employees.map((employee) => (
+                  <option
+                    key={employee.user_id}
+                    className="text-[#17191b]"
+                    value={employee.user_id}
+                  >
+                    {getDisplayName(employee)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-2 text-xs font-bold uppercase tracking-wide text-white/45">
+              Priority
+              <select
+                value={form.priority}
+                onChange={(event) => onUpdateField("priority", event.target.value)}
+                className="h-11 rounded-lg border border-white/10 bg-white/10 px-3 text-sm font-bold text-white outline-none"
+              >
+                <option className="text-[#17191b]">Low</option>
+                <option className="text-[#17191b]">Medium</option>
+                <option className="text-[#17191b]">High</option>
+                <option className="text-[#17191b]">Urgent</option>
+              </select>
+            </label>
+            <label className="grid gap-2 text-xs font-bold uppercase tracking-wide text-white/45">
+              Due date
+              <input
+                type="datetime-local"
+                value={form.endDatetime}
+                onChange={(event) => onUpdateField("endDatetime", event.target.value)}
+                className="h-11 rounded-lg border border-white/10 bg-white/10 px-3 text-sm font-bold text-white outline-none"
+              />
+            </label>
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
+            <label className="grid gap-2 text-xs font-bold uppercase tracking-wide text-white/45">
+              Timeline start
+              <input
+                type="datetime-local"
+                value={form.startDatetime}
+                onChange={(event) => onUpdateField("startDatetime", event.target.value)}
+                className="h-11 rounded-lg border border-white/10 bg-white/10 px-3 text-sm font-bold text-white outline-none"
+              />
+            </label>
+            <div className="grid gap-2 text-xs font-bold uppercase tracking-wide text-white/45">
+              Fields
+              <button
+                type="button"
+                className="h-11 justify-self-start rounded-lg bg-white/10 px-4 text-sm font-bold normal-case tracking-normal text-white/75 transition hover:bg-white/15"
+              >
+                + Create new field
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between border-t border-white/10 px-6 py-4">
+          <button
+            type="button"
+            className="rounded-lg border border-white/10 px-4 py-2 text-sm font-bold text-white/70 transition hover:bg-white/10"
+          >
+            Templates
+          </button>
+          <div className="flex items-center">
+            <button
+              type="submit"
+              className="h-11 rounded-l-xl bg-white px-5 text-sm font-bold text-[#17191b] transition hover:bg-white/90"
+            >
+              Create Task
+            </button>
+            <button
+              type="button"
+              className="h-11 rounded-r-xl border-l border-[#d6deed] bg-white px-3 text-sm font-bold text-[#17191b]"
+              aria-label="More create options"
+            >
+              ⌄
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
   );
 }
@@ -1249,7 +1748,7 @@ function TaskRow({
       onDragLeave={onRowDragLeave}
       className={`relative grid border-b border-[#d6deed] text-sm text-[#2f3442] transition ${
         isDragging ? "opacity-50" : "opacity-100"
-      } ${isSelected ? "bg-[#93C5FD]" : "bg-white"}`}
+      } ${isSelected ? "bg-[#BBE1FA]/80" : "bg-white"}`}
       style={{ gridTemplateColumns }}
     >
       {dropPosition ? (
@@ -1260,7 +1759,7 @@ function TaskRow({
         />
       ) : null}
       <div
-        className="flex cursor-grab items-center justify-center p-2 text-[#98A2B3] active:cursor-grabbing"
+        className="sticky left-0 z-20 flex cursor-grab items-center justify-center bg-inherit p-2 text-[#98A2B3] active:cursor-grabbing"
         onMouseDown={onPrepareDrag}
         onMouseUp={onReleaseDrag}
         onTouchStart={onPrepareDrag}
@@ -1270,7 +1769,7 @@ function TaskRow({
           ⋮⋮
         </span>
       </div>
-      <div className="flex items-center justify-center p-3">
+      <div className="sticky left-[32px] z-20 flex items-center justify-center bg-inherit p-3">
         <input
           type="checkbox"
           checked={isSelected}
@@ -1286,6 +1785,7 @@ function TaskRow({
           employees={employees}
           task={task}
           status={status}
+          isSticky={column === "Task"}
           onStatusChange={onStatusChange}
           onTaskUpdate={onTaskUpdate}
         />
@@ -1297,6 +1797,7 @@ function TaskRow({
 function TaskCell({
   column,
   employees,
+  isSticky,
   task,
   status,
   onStatusChange,
@@ -1305,6 +1806,7 @@ function TaskCell({
   if (column === "Task") {
     return (
       <EditableTextCell
+        className={isSticky ? "sticky left-[76px] z-20 bg-inherit" : ""}
         value={task.title ?? ""}
         description={task.description}
         onSave={(value) => onTaskUpdate(task, { title: value })}
@@ -1410,8 +1912,28 @@ function PeoplePickerCell({ employees, selectedUserId, onAssign }) {
     setIsOpen(false);
   }
 
+  function assignDroppedEmployee(event) {
+    event.preventDefault();
+    const userId =
+      event.dataTransfer.getData("application/x-optima-employee-id") ||
+      event.dataTransfer.getData("text/plain");
+
+    if (userId && employees.some((employee) => employee.user_id === userId)) {
+      onAssign(userId);
+      closePicker();
+    }
+  }
+
   return (
-    <div className="relative p-2">
+    <div
+      className="relative p-2"
+      onDragOver={(event) => {
+        if (event.dataTransfer.types.includes("application/x-optima-employee-id")) {
+          event.preventDefault();
+        }
+      }}
+      onDrop={assignDroppedEmployee}
+    >
       <button
         type="button"
         onClick={() => setIsOpen((current) => !current)}
@@ -1509,7 +2031,7 @@ function PeoplePickerCell({ employees, selectedUserId, onAssign }) {
   );
 }
 
-function EditableTextCell({ value, description, onSave }) {
+function EditableTextCell({ className = "", value, description, onSave }) {
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(value);
 
@@ -1528,7 +2050,7 @@ function EditableTextCell({ value, description, onSave }) {
 
   if (isEditing) {
     return (
-      <div className="p-2">
+      <div className={`${className} p-2`}>
         <input
           value={draft}
           onBlur={saveDraft}
@@ -1557,7 +2079,7 @@ function EditableTextCell({ value, description, onSave }) {
         setDraft(value);
         setIsEditing(true);
       }}
-      className="min-h-14 p-3 text-left transition hover:bg-[#f8faff]"
+      className={`${className} min-h-14 p-3 text-left transition hover:bg-[#f8faff]`}
       title="Edit task"
     >
       <p className="font-semibold">{value}</p>
@@ -1737,6 +2259,42 @@ function getEmployeeSearchText(employee) {
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
+}
+
+function getEmployeeMatchScore(employee) {
+  let score = 68;
+
+  if (employee?.skills?.length) {
+    score += Math.min(employee.skills.length * 6, 18);
+  }
+
+  if (employee?.department) {
+    score += 7;
+  }
+
+  if (employee?.account_status?.toLowerCase?.() === "active") {
+    score += 7;
+  }
+
+  return Math.min(score, 98);
+}
+
+function getEmployeeMatchSummary(employee) {
+  const summary = [];
+
+  if (employee?.account_status) {
+    summary.push(employee.account_status);
+  }
+
+  if (employee?.department) {
+    summary.push(employee.department);
+  }
+
+  if (employee?.skills?.length) {
+    summary.push(employee.skills.slice(0, 2).join(", "));
+  }
+
+  return summary.join(" · ") || employee?.email || "Eligible profile";
 }
 
 function formatFullDate(value) {
