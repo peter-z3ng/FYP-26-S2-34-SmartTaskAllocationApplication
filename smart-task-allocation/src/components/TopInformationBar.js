@@ -11,7 +11,11 @@ const roleActions = {
     { label: "Create workspace", href: "/manager/workspace", group: "Workspace" },
     { label: "Create workspace item", href: "/manager/workspace", group: "Workspace" },
     { label: "Review team capacity", href: "/manager/team", group: "Team" },
-    { label: "Adjust workspace preferences", href: "/manager/settings", group: "Settings" },
+    { label: "View organization", href: "/manager/organization", group: "Organization" },
+    { label: "Open inbox", href: "/manager/inbox", group: "Inbox" },
+    { label: "Open my space", href: "/manager/my-space", group: "My Space" },
+    { label: "Review archive", href: "/manager/archive", group: "Archive" },
+    { label: "Get support", href: "/manager/support", group: "Support" },
   ],
   useradmin: [
     { label: "Create account", href: "/useradmin/accounts", group: "Accounts" },
@@ -158,7 +162,7 @@ export default function TopInformationBar({ actor }) {
 
   function profileHref() {
     if (actor === "manager") {
-      return "/manager/settings";
+      return "/manager/my-space";
     }
 
     if (actor === "employee") {
