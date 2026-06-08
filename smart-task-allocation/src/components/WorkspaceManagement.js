@@ -1165,7 +1165,7 @@ function TaskGroup({
 
       <div className="overflow-visible bg-white">
         <div
-          className="sticky top-0 z-30 grid border-b border-[#d6deed] text-sm font-bold text-[#2f3442]"
+          className="sticky top-0 z-10 grid border-b border-[#d6deed] text-sm font-bold text-[#2f3442]"
           style={{ gridTemplateColumns }}
         >
           <div className="sticky left-0 z-40 bg-[#fbfcff] p-2" />

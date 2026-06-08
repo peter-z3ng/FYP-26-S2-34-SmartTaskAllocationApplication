@@ -173,7 +173,7 @@ export default function TopInformationBar({ actor }) {
   }
 
   return (
-    <div className="relative z-30 flex min-h-14 w-full items-center gap-4 bg-[#C7DDEB]/80 px-4 py-1 backdrop-blur-md sm:px-6 lg:px-8">
+    <div className="relative z-100 flex min-h-14 w-full items-center gap-4 bg-[#C7DDEB]/80 px-4 py-1 backdrop-blur-md sm:px-6 lg:px-8">
       <div className="relative h-10 w-full max-w-[340px] shrink-0 ml-22">
         <span className="absolute left-3 top-1/2 z-10 -translate-y-1/2 text-[#61708a]">
           <SearchIcon />
