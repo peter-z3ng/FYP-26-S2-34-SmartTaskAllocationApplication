@@ -32,22 +32,14 @@ export async function GET(request) {
     }
 
     const organizationId = await getManagerOrganizationId(supabase, user);
-    const { data: employeeRole } = await supabase
-      .from("role")
-      .select("role_id")
-      .ilike("role_name", "employee")
-      .maybeSingle();
-
     let query = supabase
       .from("user_account")
-      .select("user_id, username, email, account_status, role:role_id(role_name)");
+      .select(
+        "user_id, username, email, account_status, role:role_id(role_name), department:department_id(department_name)"
+      );
 
     if (organizationId) {
       query = query.eq("organization_id", organizationId);
-    }
-
-    if (employeeRole?.role_id) {
-      query = query.eq("role_id", employeeRole.role_id);
     }
 
     const { data, error } = await query.order("username", { ascending: true });
@@ -57,18 +49,34 @@ export async function GET(request) {
     }
 
     const employeeIds = (data ?? []).map((employee) => employee.user_id);
-    const { data: skillRows, error: skillError } = employeeIds.length
-      ? await supabase
-          .from("user_skill")
-          .select("user_id, skill:skill_id(skill_name)")
-          .in("user_id", employeeIds)
-      : { data: [], error: null };
+    const [{ data: skillRows, error: skillError }, { data: availabilityRows, error: availabilityError }] =
+      employeeIds.length
+        ? await Promise.all([
+            supabase
+              .from("user_skill")
+              .select("user_id, skill:skill_id(skill_name)")
+              .in("user_id", employeeIds),
+            supabase
+              .from("availability")
+              .select("user_id, status, availability_start, availability_end")
+              .in("user_id", employeeIds)
+              .order("availability_start", { ascending: false }),
+          ])
+        : [
+            { data: [], error: null },
+            { data: [], error: null },
+          ];
 
     if (skillError) {
       return NextResponse.json({ error: skillError.message }, { status: 400 });
     }
 
+    if (availabilityError) {
+      return NextResponse.json({ error: availabilityError.message }, { status: 400 });
+    }
+
     const skillsByUserId = new Map();
+    const availabilityByUserId = new Map();
 
     for (const row of skillRows ?? []) {
       const currentSkills = skillsByUserId.get(row.user_id) ?? [];
@@ -81,11 +89,21 @@ export async function GET(request) {
       skillsByUserId.set(row.user_id, currentSkills);
     }
 
+    for (const row of availabilityRows ?? []) {
+      if (!availabilityByUserId.has(row.user_id)) {
+        availabilityByUserId.set(row.user_id, row);
+      }
+    }
+
+    const userAccounts = (data ?? []).map((employee) => ({
+      ...employee,
+      availability: availabilityByUserId.get(employee.user_id) ?? null,
+      skills: skillsByUserId.get(employee.user_id) ?? [],
+    }));
+
     return NextResponse.json({
-      employees: (data ?? []).map((employee) => ({
-        ...employee,
-        skills: skillsByUserId.get(employee.user_id) ?? [],
-      })),
+      user_accounts: userAccounts,
+      employees: userAccounts,
     });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

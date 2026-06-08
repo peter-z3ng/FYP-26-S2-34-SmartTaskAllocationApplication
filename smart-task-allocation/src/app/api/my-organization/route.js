@@ -29,7 +29,7 @@ async function getUserAccount(supabase, user) {
 export async function GET(request) {
   try {
     const supabase = getSupabaseAdminClient();
-    const { user, error: authError } = await requireUserAdmin(request, supabase);
+    const { user, error: authError } = await getAuthenticatedUser(request, supabase);
 
     if (authError) {
       return NextResponse.json({ error: authError }, { status: 403 });
