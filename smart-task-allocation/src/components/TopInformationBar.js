@@ -7,6 +7,13 @@ import { getSupabaseBrowserClient } from "@/lib/supabaseClient";
 import { sideMenuNavigation } from "@/lib/sideMenuNavigation";
 
 const roleActions = {
+  platformadmin: [
+    { label: "Open home", href: "/dashboard", group: "Home" },
+    { label: "Manage organisations", href: "/dashboard#organisations", group: "Organisations" },
+    { label: "Manage users", href: "/dashboard#users", group: "Users" },
+    { label: "Manage roles", href: "/dashboard#roles", group: "Roles" },
+    { label: "Review settings", href: "/platformadmin/settings", group: "Settings" },
+  ],
   manager: [
     { label: "Create workspace", href: "/manager/workspace", group: "Workspace" },
     { label: "Create workspace item", href: "/manager/workspace", group: "Workspace" },
@@ -163,6 +170,10 @@ export default function TopInformationBar({ actor }) {
 
     if (actor === "employee") {
       return "/employee/settings";
+    }
+
+    if (actor === "platformadmin") {
+      return "/platformadmin/settings";
     }
 
     return "/useradmin/accounts";

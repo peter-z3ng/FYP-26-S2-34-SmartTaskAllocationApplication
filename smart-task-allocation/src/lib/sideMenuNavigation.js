@@ -1,4 +1,15 @@
 export const sideMenuNavigation = {
+  platformadmin: {
+    label: "Platform Admin",
+    homeHref: "/dashboard",
+    items: [
+      { label: "Home", href: "/dashboard", icon: "home" },
+      { label: "Organisations", href: "/dashboard#organisations", icon: "organization" },
+      { label: "Users", href: "/dashboard#users", icon: "users" },
+      { label: "Roles", href: "/dashboard#roles", icon: "workspace" },
+      { label: "Settings", href: "/platformadmin/settings", icon: "settings" },
+    ],
+  },
   useradmin: {
     label: "User Admin",
     homeHref: "/useradmin/accounts",

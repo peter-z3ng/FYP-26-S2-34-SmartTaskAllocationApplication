@@ -3,6 +3,21 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --optima-surface: #ffffff;
+  --optima-surface-muted: #f8faff;
+  --optima-border: #d6deed;
+  --optima-primary: #07183b;
+  --optima-secondary: #667085;
+  --optima-muted: #667085;
+  --optima-button: #0d1e4c;
+  --optima-button-hover: #0b1b32;
+  --optima-accent: #93c5fd;
+  --optima-danger: #ef4444;
+  --optima-danger-bg: #fff1f2;
+  --optima-success: #10b981;
+  --optima-success-bg: #ecfdf5;
+  --optima-warning: #f59e0b;
+  --optima-warning-bg: #fffbeb;
 }
 
 @theme inline {

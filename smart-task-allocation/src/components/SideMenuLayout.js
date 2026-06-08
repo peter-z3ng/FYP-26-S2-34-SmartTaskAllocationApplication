@@ -106,7 +106,7 @@ export default function SideMenuLayout({ actor, children }) {
                 aria-label={`${navigation.label} navigation`}
               >
                 {navigation.items.map((item) => {
-                  const isActive = pathname === item.href;
+                  const isActive = !item.href.includes("#") && pathname === item.href;
 
                   return (
                     <Link

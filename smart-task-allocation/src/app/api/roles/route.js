@@ -13,7 +13,7 @@ export async function GET(request) {
 
     const { data, error } = await supabase
       .from("role")
-      .select("role_id, role_name")
+      .select("*")
       .order("role_id", { ascending: true });
 
     if (error) {
@@ -35,7 +35,9 @@ export async function POST(request) {
       return NextResponse.json({ error: authError }, { status: 403 });
     }
 
-    const { roleName, description } = await request.json();
+    const body = await request.json();
+    const roleName = body.roleName ?? body.role_name;
+    const description = body.description;
     const cleanRoleName = typeof roleName === "string" ? roleName.trim() : "";
 
     if (!cleanRoleName) {
@@ -67,7 +69,10 @@ export async function PATCH(request) {
       return NextResponse.json({ error: authError }, { status: 403 });
     }
 
-    const { roleId, roleName, description } = await request.json();
+    const body = await request.json();
+    const roleId = body.roleId ?? body.role_id;
+    const roleName = body.roleName ?? body.role_name;
+    const description = body.description;
 
     const { error } = await supabase
       .from("role")

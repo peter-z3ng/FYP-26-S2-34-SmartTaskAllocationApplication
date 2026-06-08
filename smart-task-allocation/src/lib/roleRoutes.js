@@ -1,7 +1,7 @@
 const ROLE_ROUTES = {
-  platformadmin: "/platformadmin",
-  platform_admin: "/platformadmin",
-  "platform admin": "/platformadmin",
+  platformadmin: "/dashboard",
+  platform_admin: "/dashboard",
+  "platform admin": "/dashboard",
   useradmin: "/useradmin/accounts",
   user_admin: "/useradmin/accounts",
   "user admin": "/useradmin/accounts",
