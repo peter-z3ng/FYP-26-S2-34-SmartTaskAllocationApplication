@@ -2,14 +2,24 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabaseClient";
 import { sideMenuNavigation } from "@/lib/sideMenuNavigation";
 
 const roleActions = {
   manager: [
-    { label: "Create workspace", href: "/manager/workspace", group: "Workspace" },
-    { label: "Create workspace item", href: "/manager/workspace", group: "Workspace" },
+    {
+      label: "Create workspace",
+      href: "/manager/workspace",
+      group: "Workspace",
+      actionId: "create-workspace",
+    },
+    {
+      label: "Create workspace item",
+      href: "/manager/workspace",
+      group: "Workspace",
+      actionId: "create-workspace-item",
+    },
     { label: "Review team capacity", href: "/manager/team", group: "Team" },
     { label: "View organization", href: "/manager/organization", group: "Organization" },
     { label: "Open inbox", href: "/manager/inbox", group: "Inbox" },
@@ -29,6 +39,19 @@ const roleActions = {
     { label: "Open inbox", href: "/employee/inbox", group: "Inbox" },
     { label: "Open my space", href: "/employee/my-space", group: "My Space" },
     { label: "Get support", href: "/employee/support", group: "Support" },
+  ],
+};
+
+const aiAgentItems = {
+  manager: [
+    {
+      label: "Optimus AI",
+      description: "Automate task assignment and summarize workspace activity.",
+      href: "/manager/workspace",
+      group: "Workspace",
+      type: "AI Agent",
+      actionId: "open-optimus-ai",
+    },
   ],
 };
 
@@ -83,29 +106,37 @@ function UserIcon() {
 
 export default function TopInformationBar({ actor }) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchInputRef = useRef(null);
   const [query, setQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [accountSearchItems, setAccountSearchItems] = useState([]);
+  const [isLoadingSearchItems, setIsLoadingSearchItems] = useState(false);
   const [profile, setProfile] = useState({ email: "", name: "" });
   const [now, setNow] = useState(() => new Date());
 
-  const searchItems = useMemo(() => {
+  const baseSearchItems = useMemo(() => {
     const navigationItems =
       sideMenuNavigation[actor]?.items.map((item) => ({
         label: item.label,
         href: item.href,
         group: sideMenuNavigation[actor].label,
-        type: "Page",
+        type: "Action",
       })) ?? [];
     const actionItems = (roleActions[actor] ?? []).map((item) => ({
       ...item,
       type: "Action",
     }));
 
-    return [...actionItems, ...navigationItems];
+    return [...(aiAgentItems[actor] ?? []), ...actionItems, ...navigationItems];
   }, [actor]);
+
+  const searchItems = useMemo(
+    () => dedupeSearchItems([...accountSearchItems, ...baseSearchItems]),
+    [accountSearchItems, baseSearchItems],
+  );
 
   const searchResults = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -116,9 +147,11 @@ export default function TopInformationBar({ actor }) {
 
     return searchItems
       .filter((item) =>
-        `${item.group} ${item.label} ${item.href}`.toLowerCase().includes(normalizedQuery)
+        `${item.group} ${item.label} ${item.description ?? ""} ${item.type} ${item.href}`
+          .toLowerCase()
+          .includes(normalizedQuery)
       )
-      .slice(0, 8);
+      .slice(0, 12);
   }, [query, searchItems]);
 
   useEffect(() => {
@@ -134,6 +167,95 @@ export default function TopInformationBar({ actor }) {
 
     searchInputRef.current?.focus();
   }, [isSearchOpen]);
+
+  async function authHeaders() {
+    const supabase = getSupabaseBrowserClient();
+    const { data } = await supabase.auth.getSession();
+
+    return {
+      Authorization: `Bearer ${data.session?.access_token ?? ""}`,
+    };
+  }
+
+  async function fetchJson(path) {
+    const response = await fetch(path, { headers: await authHeaders() });
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || `Could not load ${path}.`);
+    }
+
+    return result;
+  }
+
+  async function loadAccountSearchItems() {
+    setIsLoadingSearchItems(true);
+
+    try {
+      if (actor === "manager") {
+        const [workspaceResult, taskResult, teamResult, employeeResult] = await Promise.allSettled([
+          fetchJson("/api/workspaces"),
+          fetchJson("/api/tasks"),
+          fetchJson("/api/teams"),
+          fetchJson("/api/employees"),
+        ]);
+
+        setAccountSearchItems([
+          ...itemsFromWorkspaces(settledValue(workspaceResult), "/manager/workspace"),
+          ...itemsFromTasks(settledValue(taskResult), "/manager/workspace"),
+          ...itemsFromTeams(settledValue(teamResult), "/manager/team"),
+          ...itemsFromMembers(settledValue(employeeResult), "/manager/team"),
+        ]);
+        return;
+      }
+
+      if (actor === "employee") {
+        const [workspaceResult, teamResult, invitationResult] = await Promise.allSettled([
+          fetchJson("/api/employee-workspaces"),
+          fetchJson("/api/teams"),
+          fetchJson("/api/team-invitations"),
+        ]);
+
+        setAccountSearchItems([
+          ...itemsFromWorkspaces(settledValue(workspaceResult), "/employee/workspace"),
+          ...itemsFromTasks(settledValue(workspaceResult), "/employee/workspace"),
+          ...itemsFromTeams(settledValue(teamResult), "/employee/team"),
+          ...itemsFromMembers(settledValue(teamResult), "/employee/team"),
+          ...itemsFromInvitations(settledValue(invitationResult), "/employee/team"),
+        ]);
+        return;
+      }
+
+      if (actor === "useradmin") {
+        const [accountResult, roleResult, organizationResult] = await Promise.allSettled([
+          fetchJson("/api/accounts"),
+          fetchJson("/api/roles"),
+          fetchJson("/api/my-organization"),
+        ]);
+
+        setAccountSearchItems([
+          ...itemsFromAccounts(settledValue(accountResult), "/useradmin/accounts"),
+          ...itemsFromRoles(settledValue(roleResult), "/useradmin/roles"),
+          ...itemsFromOrganization(settledValue(organizationResult), "/useradmin/organization"),
+        ]);
+      }
+    } finally {
+      setIsLoadingSearchItems(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!isSearchOpen) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      loadAccountSearchItems();
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actor, isSearchOpen]);
 
   async function loadProfile() {
     const supabase = getSupabaseBrowserClient();
@@ -174,9 +296,37 @@ export default function TopInformationBar({ actor }) {
     return "/useradmin/accounts";
   }
 
+  function closeSearch() {
+    setIsSearchOpen(false);
+    setQuery("");
+  }
+
+  function runSearchResult(item) {
+    closeSearch();
+
+    if (item.actionId) {
+      const detail = {
+        actionId: item.actionId,
+        actor,
+        href: item.href,
+      };
+
+      window.sessionStorage.setItem("optima:pending-search-action", JSON.stringify(detail));
+      window.dispatchEvent(new CustomEvent("optima:search-action", { detail }));
+
+      if (pathname !== item.href) {
+        router.push(item.href);
+      }
+
+      return;
+    }
+
+    router.push(item.href);
+  }
+
   return (
-    <div className="relative z-100 flex min-h-14 w-full items-center gap-4 bg-[#C7DDEB]/80 px-4 py-1 backdrop-blur-md sm:px-6 lg:px-8">
-      <div className="relative h-10 w-full max-w-[340px] shrink-0 ml-22">
+    <div className="relative z-100 flex min-h-14 w-full items-center gap-4 bg-[#C7DDEB] px-4 py-1 sm:px-6 lg:px-8">
+      <div className="absolute left-1/2 top-1/2 h-10 w-[min(34rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2">
         <span className="absolute left-3 top-1/2 z-10 -translate-y-1/2 text-[#61708a]">
           <SearchIcon />
         </span>
@@ -271,10 +421,10 @@ export default function TopInformationBar({ actor }) {
       </div>
 
       {isSearchOpen ? (
-        <div className="fixed inset-0 z-50 bg-black/35 px-4 py-10 backdrop-blur-sm">
-          <div className="mx-auto w-full max-w-4xl overflow-hidden rounded-2xl border border-white/10 bg-[#151719] text-white shadow-[0_28px_90px_rgba(0,0,0,0.45)]">
-            <div className="flex items-center gap-4 border-b border-white/10 px-6 py-5">
-              <span className="text-white/65">
+        <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center px-4 py-10">
+          <div className="pointer-events-auto mx-auto w-full max-w-4xl overflow-hidden rounded-2xl border border-white/60 bg-white/20 text-[#07183b] shadow-[0_28px_90px_rgba(7,24,59,0.28)] backdrop-blur-md">
+            <div className="flex items-center gap-4 border-b border-white/60 px-6 py-5">
+              <span className="text-[#61708a]">
                 <SearchIcon />
               </span>
               <input
@@ -287,9 +437,9 @@ export default function TopInformationBar({ actor }) {
                     setQuery("");
                   }
                 }}
-                placeholder="Search for apps and commands..."
-                className="h-6 min-w-0 flex-1 bg-transparent text-xl font-semibold text-white outline-none placeholder:text-white/45"
-                aria-label="Search for apps and commands"
+                placeholder="Search everything..."
+                className="h-6 min-w-0 flex-1 bg-transparent text-xl font-semibold text-[#07183b] outline-none placeholder:text-[#61708a]"
+                aria-label="Search everything"
               />
               <button
                 type="button"
@@ -297,55 +447,186 @@ export default function TopInformationBar({ actor }) {
                   setIsSearchOpen(false);
                   setQuery("");
                 }}
-                className="rounded-md border border-white/15 px-3 py-2 text-sm font-bold text-white/70 hover:bg-white/10"
+                className="rounded-md border border-white/60 bg-white/20 px-3 py-2 text-sm font-bold text-[#52627a] hover:bg-white/40"
               >
                 Esc
               </button>
             </div>
 
             <div className="max-h-[60vh] overflow-y-auto px-4 py-4">
-              <p className="px-3 py-2 text-sm font-bold text-white/55">
-                Actions and pages
+              <p className="px-3 py-2 text-sm font-bold text-[#52627a]">
+                Results
               </p>
               <div className="space-y-1">
-                {searchResults.map((item) => (
-                  <Link
-                    key={`${item.type}-${item.group}-${item.href}-${item.label}`}
-                    href={item.href}
+              {searchResults.map((item) => (
+                  <button
+                    key={`${item.type}-${item.group}-${item.href}-${item.label}-${item.id ?? ""}`}
                     onClick={() => {
-                      setIsSearchOpen(false);
-                      setQuery("");
+                      runSearchResult(item);
                     }}
-                    className="flex items-center justify-between gap-4 rounded-lg px-3 py-3 text-left hover:bg-white/10"
+                    className="flex w-full items-center justify-between gap-4 rounded-lg px-3 py-3 text-left hover:bg-white/35"
                   >
-                    <span className="flex min-w-0 items-center gap-3">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-sm font-black">
-                        {item.label.charAt(0)}
-                      </span>
-                      <span className="truncate text-sm font-bold">{item.label}</span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-bold">{item.label}</span>
+                      {item.description ? (
+                        <span className="block truncate text-xs font-semibold text-[#667085]">
+                          {item.description}
+                        </span>
+                      ) : null}
                     </span>
-                    <span className="shrink-0 text-sm font-semibold text-white/55">
-                      {item.group}
+                    <span className="shrink-0 text-sm font-semibold text-[#667085]">
+                      {item.type}
                     </span>
-                  </Link>
+                  </button>
                 ))}
                 {!searchResults.length ? (
-                  <p className="rounded-lg px-3 py-8 text-center text-sm font-semibold text-white/45">
-                    No matching actions or pages for this account.
+                  <p className="rounded-lg px-3 py-8 text-center text-sm font-semibold text-[#667085]">
+                    {isLoadingSearchItems
+                      ? "Loading account results..."
+                      : "No matching results."}
                   </p>
                 ) : null}
               </div>
-            </div>
-
-            <div className="flex items-center justify-between border-t border-white/10 bg-white/5 px-6 py-3 text-sm font-bold text-white/55">
-              <span>{sideMenuNavigation[actor]?.label} search only</span>
-              <span>Open result</span>
             </div>
           </div>
         </div>
       ) : null}
     </div>
   );
+}
+
+function settledValue(result) {
+  return result.status === "fulfilled" ? result.value : null;
+}
+
+function dedupeSearchItems(items) {
+  const seen = new Set();
+
+  return items.filter((item) => {
+    const key = `${item.type}-${item.href}-${item.label}-${item.id ?? ""}`;
+
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+}
+
+function itemsFromWorkspaces(payload, href) {
+  return (payload?.workspaces ?? []).map((workspace) => ({
+    id: workspace.workspace_id,
+    label: workspace.workspace_name,
+    description: workspace.description || "Workspace",
+    href,
+    group: "Workspace",
+    type: "Workspace",
+  }));
+}
+
+function itemsFromTasks(payload, href) {
+  return (payload?.tasks ?? []).map((task) => ({
+    id: task.task_id,
+    label: task.title,
+    description: [task.status, task.priority].filter(Boolean).join(" · ") || "Task",
+    href,
+    group: "Workspace",
+    type: "Task",
+  }));
+}
+
+function itemsFromTeams(payload, href) {
+  return (payload?.teams ?? []).map((team) => ({
+    id: team.team_id,
+    label: team.team_name,
+    description: "Team",
+    href,
+    group: "Team",
+    type: "Team",
+  }));
+}
+
+function itemsFromMembers(payload, href) {
+  const members = payload?.members ?? payload?.employees ?? payload?.user_accounts ?? [];
+
+  return members.map((member) => ({
+    id: member.user_id,
+    label: member.profile?.full_name || member.full_name || member.username || member.email || "Member",
+    description: [
+      member.role?.role_name,
+      member.department?.department_name,
+      member.email,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+    href,
+    group: "Team",
+    type: "Member",
+  }));
+}
+
+function itemsFromInvitations(payload, href) {
+  return (payload?.invitations ?? []).map((invitation) => ({
+    id: invitation.invitation_id,
+    label: `Invitation: ${invitation.team?.team_name ?? "Team"}`,
+    description: "Accept or reject team invitation",
+    href,
+    group: "Team",
+    type: "Action",
+  }));
+}
+
+function itemsFromAccounts(payload, href) {
+  return (payload?.accounts ?? []).map((account) => ({
+    id: account.user_id,
+    label: account.username || account.email || "Account",
+    description: [account.role?.role_name, account.account_status, account.email]
+      .filter(Boolean)
+      .join(" · "),
+    href,
+    group: "Accounts",
+    type: "Member",
+  }));
+}
+
+function itemsFromRoles(payload, href) {
+  return (payload?.roles ?? []).map((role) => ({
+    id: role.role_id,
+    label: role.role_name,
+    description: "Role access",
+    href,
+    group: "Roles",
+    type: "Role",
+  }));
+}
+
+function itemsFromOrganization(payload, href) {
+  const items = [];
+
+  if (payload?.organization?.organization_name) {
+    items.push({
+      id: payload.organization.organization_id,
+      label: payload.organization.organization_name,
+      description: payload.organization.organization_type || "Organization",
+      href,
+      group: "Organization",
+      type: "Organization",
+    });
+  }
+
+  for (const department of payload?.departments ?? []) {
+    items.push({
+      id: department.department_id,
+      label: department.department_name,
+      description: "Department",
+      href,
+      group: "Organization",
+      type: "Department",
+    });
+  }
+
+  return items;
 }
 
 function formatDateTime(value) {

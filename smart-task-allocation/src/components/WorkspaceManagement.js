@@ -456,6 +456,69 @@ export default function WorkspaceManagement() {
     setIsTaskOverlayOpen(true);
   }
 
+  function runWorkspaceSearchAction(actionId) {
+    if (actionId === "create-workspace") {
+      setIsWorkspaceSidebarCollapsed(false);
+
+      const nextName = window.prompt("Create workspace", "");
+
+      if (nextName?.trim()) {
+        createWorkspaceWithName(nextName);
+      }
+
+      return;
+    }
+
+    if (actionId === "create-workspace-item") {
+      if (!currentWorkspace) {
+        setError("Select or create a workspace before adding a task.");
+        return;
+      }
+
+      startNewTask();
+    }
+  }
+
+  useEffect(() => {
+    function handleSearchAction(event) {
+      const detail = event.detail ?? {};
+
+      if (detail.actor !== "manager") {
+        return;
+      }
+
+      if (!["create-workspace", "create-workspace-item"].includes(detail.actionId)) {
+        return;
+      }
+
+      window.sessionStorage.removeItem("optima:pending-search-action");
+      runWorkspaceSearchAction(detail.actionId);
+    }
+
+    window.addEventListener("optima:search-action", handleSearchAction);
+
+    const pending = window.sessionStorage.getItem("optima:pending-search-action");
+
+    if (pending) {
+      try {
+        const detail = JSON.parse(pending);
+
+        if (
+          detail.actor === "manager" &&
+          ["create-workspace", "create-workspace-item"].includes(detail.actionId)
+        ) {
+          window.sessionStorage.removeItem("optima:pending-search-action");
+          window.setTimeout(() => runWorkspaceSearchAction(detail.actionId), 0);
+        }
+      } catch {
+        window.sessionStorage.removeItem("optima:pending-search-action");
+      }
+    }
+
+    return () => window.removeEventListener("optima:search-action", handleSearchAction);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentWorkspace]);
+
   function toggleColumn(column) {
     if (column === "Task") {
       return;
@@ -612,7 +675,7 @@ export default function WorkspaceManagement() {
             disabled={!currentWorkspace}
             className="inline-flex items-center gap-2 rounded-md text-left text-3xl font-bold text-[#2f3442] transition hover:bg-[#e8f3ff] disabled:cursor-default disabled:hover:bg-transparent"
           >
-            {currentWorkspace?.workspace_name ?? "Workspace"}
+            {currentWorkspace?.workspace_name ?? "Start with a template"}
             {currentWorkspace ? <span className="text-xl text-[#667085]">⌄</span> : null}
           </button>
 
@@ -634,7 +697,6 @@ export default function WorkspaceManagement() {
               employees={employees}
               currentWorkspace={currentWorkspace}
               tasks={todoTasks}
-              emptyText="Blank workspace ready. Add your first task."
               isAddingTask={isAddingTask}
               form={form}
               groupColors={groupColors}
@@ -672,7 +734,7 @@ export default function WorkspaceManagement() {
             ) : null}
             </>
           ) : (
-            <TemplatePrompt onCreateBlank={() => createWorkspaceWithName("Blank workspace")} />
+            <TemplatePrompt onCreateBlank={() => createWorkspaceWithName("My Workspace")} />
           )}
         </div>
       </section>
@@ -1019,17 +1081,13 @@ function EligibleEmployeesDrawer({ employees, onClose }) {
 function TemplatePrompt({ onCreateBlank }) {
   return (
     <div className="max-w-3xl">
-      <h3 className="text-2xl font-bold text-[#2f3442]">Start with a template</h3>
-      <p className="mt-2 text-sm text-[#667085]">
-        Choose a blank workspace now. More templates can be added later.
-      </p>
       <div className="mt-6 grid gap-4 md:grid-cols-3">
         <button
           type="button"
           onClick={onCreateBlank}
           className="rounded-xl border border-[#0a72e8] bg-[#eef6ff] p-5 text-left transition hover:bg-[#dcecff]"
         >
-          <p className="text-lg font-bold text-[#07183b]">Blank workspace</p>
+          <p className="text-lg font-bold text-[#07183b]">Simple Workspace</p>
           <p className="mt-2 text-sm leading-6 text-[#667085]">
             Start with a To-Do group and default task columns.
           </p>
@@ -1092,6 +1150,38 @@ function TaskGroup({
 
     return () => window.clearTimeout(timer);
   }, [autoAssignView]);
+
+  useEffect(() => {
+    function handleSearchAction(event) {
+      const detail = event.detail ?? {};
+
+      if (detail.actor !== "manager" || detail.actionId !== "open-optimus-ai") {
+        return;
+      }
+
+      window.sessionStorage.removeItem("optima:pending-search-action");
+      setIsOptimusOpen(true);
+    }
+
+    window.addEventListener("optima:search-action", handleSearchAction);
+
+    const pending = window.sessionStorage.getItem("optima:pending-search-action");
+
+    if (pending) {
+      try {
+        const detail = JSON.parse(pending);
+
+        if (detail.actor === "manager" && detail.actionId === "open-optimus-ai") {
+          window.sessionStorage.removeItem("optima:pending-search-action");
+          window.setTimeout(() => setIsOptimusOpen(true), 0);
+        }
+      } catch {
+        window.sessionStorage.removeItem("optima:pending-search-action");
+      }
+    }
+
+    return () => window.removeEventListener("optima:search-action", handleSearchAction);
+  }, []);
 
   function startAutoAssignScan() {
     setIsOptimusOpen(false);
