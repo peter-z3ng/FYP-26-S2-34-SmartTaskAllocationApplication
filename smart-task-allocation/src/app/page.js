@@ -76,6 +76,12 @@ export default function Home() {
           <h1 className="text-balance font-bold leading-[1.2] tracking-[0.8] md:text-3xl lg:text-6xl bg-[linear-gradient(90deg,#FFFFFF_0%,#FFFFFF_30%,#2563EB_45%,#000000_85%)] bg-clip-text text-transparent">
             Every Great Team Runs on Optima
           </h1>
+          <Link
+            href="/signup"
+            className="mt-12 inline-flex h-14 min-w-56 items-center justify-center rounded-full border border-white/80 bg-white px-8 text-sm font-extrabold uppercase tracking-normal text-[#07183b] shadow-[0_0_22px_rgba(37,99,235,0.7),0_0_48px_rgba(37,99,235,0.45)] transition hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(37,99,235,0.9),0_0_72px_rgba(37,99,235,0.55)]"
+          >
+            Get started <span className="ml-3 text-2xl leading-none">→</span>
+          </Link>
         </div>
 
         <section
