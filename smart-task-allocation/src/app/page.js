@@ -73,7 +73,7 @@ export default function Home() {
         </div>
 
         <div className="absolute left-[18%] top-[30%] z-10 max-w-[780px]">
-          <h1 className="text-balance font-bold leading-[1.2] tracking-[0.8] md:text-3xl lg:text-6xl bg-[linear-gradient(90deg,#FFFFFF_0%,#FFFFFF_30%,#2563EB_45%,#000000_80%)] bg-clip-text text-transparent">
+          <h1 className="text-balance font-bold leading-[1.2] tracking-[0.8] md:text-3xl lg:text-6xl bg-[linear-gradient(90deg,#FFFFFF_0%,#FFFFFF_30%,#2563EB_45%,#000000_85%)] bg-clip-text text-transparent">
             Every Great Team Runs on Optima
           </h1>
         </div>
