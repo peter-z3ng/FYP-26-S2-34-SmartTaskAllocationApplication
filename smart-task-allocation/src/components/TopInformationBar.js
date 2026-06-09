@@ -24,9 +24,11 @@ const roleActions = {
     { label: "Review roles", href: "/useradmin/roles", group: "Roles" },
   ],
   employee: [
-    { label: "View assigned tasks", href: "/employee/tasks", group: "My Tasks" },
-    { label: "Update availability", href: "/employee/availability", group: "Availability" },
-    { label: "Manage profile settings", href: "/employee/settings", group: "Settings" },
+    { label: "Open workspace", href: "/employee/workspace", group: "Workspace" },
+    { label: "Review team", href: "/employee/team", group: "Team" },
+    { label: "Open inbox", href: "/employee/inbox", group: "Inbox" },
+    { label: "Open my space", href: "/employee/my-space", group: "My Space" },
+    { label: "Get support", href: "/employee/support", group: "Support" },
   ],
 };
 
@@ -166,7 +168,7 @@ export default function TopInformationBar({ actor }) {
     }
 
     if (actor === "employee") {
-      return "/employee/settings";
+      return "/employee/my-space";
     }
 
     return "/useradmin/accounts";

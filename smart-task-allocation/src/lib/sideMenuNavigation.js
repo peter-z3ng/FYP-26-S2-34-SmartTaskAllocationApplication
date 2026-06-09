@@ -23,12 +23,13 @@ export const sideMenuNavigation = {
   },
   employee: {
     label: "Employee",
-    homeHref: "/employee",
+    homeHref: "/employee/workspace",
     items: [
-      { label: "Home", href: "/employee", icon: "home" },
-      { label: "My Tasks", href: "/employee/tasks", icon: "tasks" },
-      { label: "Availability", href: "/employee/availability", icon: "calendar" },
-      { label: "Settings", href: "/employee/settings", icon: "settings" },
+      { label: "Workspace", href: "/employee/workspace", icon: "workspace" },
+      { label: "Team", href: "/employee/team", icon: "users" },
+      { label: "Inbox", href: "/employee/inbox", icon: "inbox" },
+      { label: "My Space", href: "/employee/my-space", icon: "home" },
+      { label: "Support", href: "/employee/support", icon: "support" },
     ],
   },
 };

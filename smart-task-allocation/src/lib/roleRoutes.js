@@ -6,7 +6,7 @@ const ROLE_ROUTES = {
   user_admin: "/useradmin/accounts",
   "user admin": "/useradmin/accounts",
   manager: "/manager",
-  employee: "/employee",
+  employee: "/employee/workspace",
 };
 
 export function getHomeRouteForRole(roleName) {

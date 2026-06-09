@@ -230,8 +230,10 @@ export default function WorkspaceManagement() {
       }
 
       await loadWorkspaces();
+      return result.workspace ?? null;
     } catch (updateError) {
       setError(updateError.message);
+      return null;
     }
   }
 
@@ -630,6 +632,7 @@ export default function WorkspaceManagement() {
               title={groupName}
               columns={columns}
               employees={employees}
+              currentWorkspace={currentWorkspace}
               tasks={todoTasks}
               emptyText="Blank workspace ready. Add your first task."
               isAddingTask={isAddingTask}
@@ -646,6 +649,9 @@ export default function WorkspaceManagement() {
               }}
               onAddTask={startNewTask}
               onReorderTasks={reorderTasks}
+              onShareAccessChange={(linkAccess) =>
+                updateWorkspace(currentWorkspace.workspace_id, { linkAccess })
+              }
               onTaskUpdate={updateTask}
               onStatusChange={updateTaskStatus}
             />
@@ -1045,6 +1051,7 @@ function TaskGroup({
   title,
   columns,
   employees,
+  currentWorkspace,
   tasks,
   emptyText,
   isAddingTask,
@@ -1058,6 +1065,7 @@ function TaskGroup({
   onCancelTask,
   onAddTask,
   onReorderTasks,
+  onShareAccessChange,
   onTaskUpdate,
   onStatusChange,
 }) {
@@ -1066,6 +1074,7 @@ function TaskGroup({
   const [dropTarget, setDropTarget] = useState(null);
   const [isGroupSettingsOpen, setIsGroupSettingsOpen] = useState(false);
   const [isOptimusOpen, setIsOptimusOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
   const [autoAssignView, setAutoAssignView] = useState("closed");
   const [selectedTaskIds, setSelectedTaskIds] = useState(new Set());
   const gridTemplateColumns = `32px 44px ${columns
@@ -1130,6 +1139,27 @@ function TaskGroup({
               onClose={() => setIsOptimusOpen(false)}
             />
           ) : null}
+          </div>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsShareOpen((current) => !current)}
+              className="h-10 rounded-lg border border-[#c4ccdc] bg-white px-4 text-sm font-bold text-[#07183b] shadow-sm transition hover:bg-[#eef6ff]"
+            >
+              Share
+            </button>
+            {isShareOpen ? (
+              <WorkspaceShareMenu
+                workspace={currentWorkspace}
+                onAccessChange={async (linkAccess) => {
+                  const updatedWorkspace = await onShareAccessChange(linkAccess);
+
+                  if (updatedWorkspace?.link_access === "Private") {
+                    return;
+                  }
+                }}
+              />
+            ) : null}
           </div>
           <button
             type="button"
@@ -1291,6 +1321,95 @@ function TaskGroup({
       </div>
 
     </section>
+  );
+}
+
+function WorkspaceShareMenu({ workspace, onAccessChange }) {
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const linkAccess = workspace?.link_access ?? "Private";
+  const shareUrl =
+    typeof window !== "undefined" && workspace?.share_token
+      ? `${window.location.origin}/share/workspace/${workspace.share_token}`
+      : "";
+
+  async function updateAccess(nextAccess) {
+    setIsUpdating(true);
+    setCopied(false);
+
+    try {
+      await onAccessChange(nextAccess);
+    } finally {
+      setIsUpdating(false);
+    }
+  }
+
+  async function copyShareLink() {
+    if (!shareUrl) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1500);
+  }
+
+  return (
+    <div className="absolute right-0 top-12 z-50 w-80 rounded-2xl border border-white/50 bg-white/40 p-4 shadow-[0_24px_80px_rgba(7,24,59,0.22)] backdrop-blur-md">
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-[#667085]">
+          Share workspace
+        </p>
+        <h3 className="mt-1 truncate text-lg font-black text-[#07183b]">
+          {workspace?.workspace_name ?? "Workspace"}
+        </h3>
+      </div>
+
+      <div className="mt-4 overflow-hidden rounded-xl border border-white/55 bg-white/45">
+        {["Private", "View", "Edit"].map((access) => (
+          <button
+            key={access}
+            type="button"
+            disabled={isUpdating}
+            onClick={() => updateAccess(access)}
+            className="flex w-full items-center justify-between border-b border-white/55 px-4 py-3 text-left text-sm font-black text-[#2f3442] last:border-b-0 hover:bg-white/65 disabled:cursor-wait"
+          >
+            <span>
+              {access}
+              <span className="mt-0.5 block text-xs font-semibold text-[#667085]">
+                {access === "Private"
+                  ? "Only invited workspace members can open it."
+                  : access === "View"
+                    ? "Anyone with the link can view."
+                    : "Anyone with the link can edit."}
+              </span>
+            </span>
+            {linkAccess === access ? <span className="text-[#0D6EFD]">✓</span> : null}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-4 rounded-xl border border-white/55 bg-white/45 p-3">
+        <p className="text-xs font-bold uppercase tracking-wide text-[#667085]">
+          Share link
+        </p>
+        <div className="mt-2 flex gap-2">
+          <input
+            readOnly
+            value={shareUrl || "Set access to View or Edit to create a link"}
+            className="h-10 min-w-0 flex-1 rounded-lg border border-[#c4ccdc] bg-white/70 px-3 text-xs font-semibold text-[#667085] outline-none"
+          />
+          <button
+            type="button"
+            disabled={!shareUrl}
+            onClick={copyShareLink}
+            className="h-10 rounded-lg bg-[#07183b] px-3 text-xs font-black text-white transition hover:bg-[#0D1E4C] disabled:cursor-not-allowed disabled:bg-[#94a3b8]"
+          >
+            {copied ? "Copied" : "Copy"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

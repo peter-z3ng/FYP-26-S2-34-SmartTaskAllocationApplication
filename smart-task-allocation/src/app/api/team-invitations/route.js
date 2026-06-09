@@ -26,6 +26,44 @@ async function getAccount(supabase, user) {
   return { account: byEmail.data, error: byEmail.error };
 }
 
+export async function GET(request) {
+  try {
+    const supabase = getSupabaseAdminClient();
+    const { user, error: authError } = await getAuthenticatedUser(request, supabase);
+
+    if (authError) {
+      return NextResponse.json({ error: authError }, { status: 403 });
+    }
+
+    const { account, error: accountError } = await getAccount(supabase, user);
+
+    if (accountError) {
+      return NextResponse.json({ error: accountError.message }, { status: 400 });
+    }
+
+    if (!account?.user_id) {
+      return NextResponse.json({ invitations: [] });
+    }
+
+    const { data, error } = await supabase
+      .from("team_invitation")
+      .select(
+        "invitation_id, team_id, inviter, invitee, status, created_at, responded_at, team:team_id(team_name), inviter_account:inviter(username, email)",
+      )
+      .eq("invitee", account.user_id)
+      .eq("status", "Pending")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ invitations: data ?? [] });
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
 export async function POST(request) {
   try {
     const supabase = getSupabaseAdminClient();
