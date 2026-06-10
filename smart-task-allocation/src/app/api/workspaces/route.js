@@ -63,7 +63,9 @@ export async function GET(request) {
     const accountUserId = await getAccountUserId(supabase, user);
     const { data, error } = await supabase
       .from("workspace")
-      .select("workspace_id, workspace_name, description, created_by, status, visibility, created_at")
+      .select(
+        "workspace_id, workspace_name, description, created_by, status, visibility, share_token, link_access, created_at"
+      )
       .eq("created_by", accountUserId)
       .order("created_at", { ascending: true });
 
@@ -131,6 +133,8 @@ export async function POST(request) {
         created_by_email: user.email ?? "",
         status: "Active",
         visibility: "Private",
+        share_token: null,
+        link_access: "Private",
         created_at: now,
       },
     });
@@ -148,7 +152,7 @@ export async function PATCH(request) {
       return NextResponse.json({ error: authError }, { status: 403 });
     }
 
-    const { workspaceId, workspaceName, visibility, status } = await request.json();
+    const { workspaceId, workspaceName, visibility, status, linkAccess } = await request.json();
     const cleanedName = cleanString(workspaceName);
 
     if (!workspaceId) {
@@ -188,17 +192,51 @@ export async function PATCH(request) {
     }
 
     const accountUserId = await getAccountUserId(supabase, user);
-    const { error } = await supabase
+    if (linkAccess !== undefined) {
+      const cleanedLinkAccess = cleanString(linkAccess);
+
+      if (!["Private", "View", "Edit"].includes(cleanedLinkAccess)) {
+        return NextResponse.json(
+          { error: "Link access must be Private, View, or Edit." },
+          { status: 400 }
+        );
+      }
+
+      const { data: currentWorkspace, error: currentWorkspaceError } = await supabase
+        .from("workspace")
+        .select("workspace_id, share_token")
+        .eq("workspace_id", workspaceId)
+        .eq("created_by", accountUserId)
+        .maybeSingle();
+
+      if (currentWorkspaceError) {
+        return NextResponse.json({ error: currentWorkspaceError.message }, { status: 400 });
+      }
+
+      if (!currentWorkspace) {
+        return NextResponse.json({ error: "Workspace was not found." }, { status: 404 });
+      }
+
+      updateValues.link_access = cleanedLinkAccess;
+      updateValues.share_token =
+        cleanedLinkAccess === "Private" ? null : currentWorkspace.share_token ?? randomUUID();
+    }
+
+    const { data: workspace, error } = await supabase
       .from("workspace")
       .update(updateValues)
       .eq("workspace_id", workspaceId)
-      .eq("created_by", accountUserId);
+      .eq("created_by", accountUserId)
+      .select(
+        "workspace_id, workspace_name, description, created_by, status, visibility, share_token, link_access, created_at"
+      )
+      .maybeSingle();
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, workspace });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

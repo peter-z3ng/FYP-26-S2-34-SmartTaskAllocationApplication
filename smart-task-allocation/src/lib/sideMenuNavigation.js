@@ -25,17 +25,22 @@ export const sideMenuNavigation = {
     items: [
       { label: "Workspace", href: "/manager/workspace", icon: "workspace" },
       { label: "Team", href: "/manager/team", icon: "users" },
-      { label: "Settings", href: "/manager/settings", icon: "settings" },
+      { label: "Organization", href: "/manager/organization", icon: "organization" },
+      { label: "Inbox", href: "/manager/inbox", icon: "inbox" },
+      { label: "My Space", href: "/manager/my-space", icon: "home" },
+      { label: "Archive", href: "/manager/archive", icon: "archive" },
+      { label: "Support", href: "/manager/support", icon: "support" },
     ],
   },
   employee: {
     label: "Employee",
-    homeHref: "/employee",
+    homeHref: "/employee/workspace",
     items: [
-      { label: "Home", href: "/employee", icon: "home" },
-      { label: "My Tasks", href: "/employee/tasks", icon: "tasks" },
-      { label: "Availability", href: "/employee/availability", icon: "calendar" },
-      { label: "Settings", href: "/employee/settings", icon: "settings" },
+      { label: "Workspace", href: "/employee/workspace", icon: "workspace" },
+      { label: "Team", href: "/employee/team", icon: "users" },
+      { label: "Inbox", href: "/employee/inbox", icon: "inbox" },
+      { label: "My Space", href: "/employee/my-space", icon: "home" },
+      { label: "Support", href: "/employee/support", icon: "support" },
     ],
   },
 };

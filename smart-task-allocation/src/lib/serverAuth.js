@@ -98,3 +98,12 @@ export async function requireManager(request, supabase) {
     "Only Manager accounts can manage workspaces and teams.",
   );
 }
+
+export async function requireEmployee(request, supabase) {
+  return requireHomeRoute(
+    request,
+    supabase,
+    ["/employee/workspace"],
+    "Only Employee accounts can access employee work areas.",
+  );
+}

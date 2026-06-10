@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import GlassmorphismProfileCard from "@/components/ui/glassmorphism-profile-card";
 import { Button } from "@/components/ui/button";
 import { getSupabaseBrowserClient } from "@/lib/supabaseClient";
@@ -456,12 +457,20 @@ export default function TeamManagement() {
             </h2>
           </div>
 
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search members..."
-            className="h-12 w-80 rounded-full border border-[#b8c4d8] bg-white px-8 text-lg text-[#07183b] shadow-[0_2px_8px_rgba(7,24,59,0.12)] outline-none placeholder:text-[#7f8da4] xl:max-w-xl"
-          />
+          <div className="mt-4 flex items-center gap-3 xl:mt-0">
+            <Link
+              href="/manager/organization"
+              className="inline-flex h-12 items-center rounded-full bg-[#0A2A66] px-6 text-sm font-black text-white shadow-[0_2px_8px_rgba(7,24,59,0.12)] transition hover:bg-[#07183b]"
+            >
+              Invite
+            </Link>
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search members..."
+              className="h-12 w-80 rounded-full border border-[#b8c4d8] bg-white px-8 text-lg text-[#07183b] shadow-[0_2px_8px_rgba(7,24,59,0.12)] outline-none placeholder:text-[#7f8da4] xl:max-w-xl"
+            />
+          </div>
         </div>
 
         {error ? (
