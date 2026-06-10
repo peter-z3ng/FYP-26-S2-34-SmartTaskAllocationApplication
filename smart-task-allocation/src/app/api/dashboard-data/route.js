@@ -43,6 +43,7 @@ export async function GET(request) {
       requests,
       availability,
       activityLogs,
+      taskComments,
     ] = await Promise.all([
       required(supabase.from("organization").select("*").order("created_at", { ascending: true })),
       required(supabase.from("role").select("*").order("role_id", { ascending: true })),
@@ -59,6 +60,7 @@ export async function GET(request) {
       optional(supabase.from("task_assignment_request").select("*").order("requested_at", { ascending: false })),
       optional(supabase.from("availability").select("*")),
       optional(supabase.from("activity_log").select("*").order("created_at", { ascending: false }).limit(10)),
+      optional(supabase.from("task_comment").select("*").order("created_at", { ascending: false }).limit(25)),
     ]);
 
     const currentAccount =
@@ -94,6 +96,7 @@ export async function GET(request) {
         requests,
         availability,
         activityLogs,
+        taskComments,
       },
     });
   } catch (error) {

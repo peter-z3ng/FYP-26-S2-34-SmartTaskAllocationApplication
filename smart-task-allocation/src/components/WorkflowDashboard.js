@@ -187,6 +187,7 @@ export default function WorkflowDashboard({ embedded = false }) {
     requests: [],
     availability: [],
     activityLogs: [],
+    taskComments: [],
   });
 
   const supabaseReady =
@@ -780,39 +781,7 @@ export default function WorkflowDashboard({ embedded = false }) {
               />
             ) : null}
 
-            <Section title="Allocation History & Activity Log">
-              <div className="grid gap-4 lg:grid-cols-2">
-                <div className="space-y-3">
-                  {taskAssignments.length ? (
-                    taskAssignments.map((assignment) => (
-                      <div key={assignment.assignment_id} className="rounded-[24px] border-2 border-[#83A6CE] bg-[#E0E5E9] p-5 shadow-sm">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="font-bold text-slate-950">{assignment.task?.title ?? "Task removed"}</p>
-                          <Chip tone={assignment.status}>{assignment.status}</Chip>
-                        </div>
-                        <p className="mt-1 text-sm text-slate-600">
-                          {assignment.user?.full_name ?? assignment.user?.username ?? "Unknown user"} | {formatDateTime(assignment.assigned_at)}
-                        </p>
-                      </div>
-                    ))
-                  ) : (
-                    <EmptyState text="No task assignments yet." />
-                  )}
-                </div>
-                <div className="space-y-3">
-                  {data.activityLogs.length ? (
-                    data.activityLogs.map((logItem) => (
-                      <div key={logItem.log_id} className="rounded-[24px] border-2 border-[#83A6CE] bg-[#E0E5E9] p-5 shadow-sm">
-                        <p className="font-bold text-slate-900">{logItem.action}</p>
-                        <p className="mt-1 text-sm text-slate-600">{logItem.details}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <EmptyState text="No activity recorded yet." />
-                  )}
-                </div>
-              </div>
-            </Section>
+            <UserFeedbackPanel comments={data.taskComments} tasks={data.tasks} users={enrichedUsers} />
           </div>
         )}
       </div>
@@ -849,6 +818,65 @@ function Metric({ label, value }) {
 
 function EmptyState({ text }) {
   return <p className="rounded-md border border-dashed border-[var(--optima-border)] bg-[var(--optima-surface-muted)] p-4 text-sm font-semibold text-[var(--optima-secondary)]">{text}</p>;
+}
+
+function UserFeedbackPanel({ comments, tasks, users }) {
+  const feedbackItems = comments.map((comment) => {
+    const task = tasks.find((item) => item.task_id === comment.task_id);
+    const user = users.find((item) => item.user_id === comment.created_by);
+
+    return {
+      ...comment,
+      task,
+      user,
+    };
+  });
+
+  return (
+    <Section title="User Feedback Management">
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <p className="max-w-2xl text-sm leading-6 text-[var(--optima-muted)]">
+          Review user-submitted feedback, identify common issues, and follow up with
+          the relevant account or task owner.
+        </p>
+        <div className="rounded-full border border-[#83A6CE] bg-[#E0E5E9] px-4 py-2 text-sm font-black text-[#0D1E4C]">
+          {feedbackItems.length} feedback item{feedbackItems.length === 1 ? "" : "s"}
+        </div>
+      </div>
+
+      {feedbackItems.length ? (
+        <div className="grid gap-3 lg:grid-cols-2">
+          {feedbackItems.map((feedback) => (
+            <article
+              key={feedback.comment_id}
+              className="rounded-[24px] border-2 border-[#83A6CE] bg-[#E0E5E9] p-5 shadow-sm"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest text-[#57708f]">
+                    {feedback.task?.title ?? `Task ${feedback.task_id}`}
+                  </p>
+                  <h3 className="mt-2 font-black text-[#07183b]">
+                    {feedback.user?.full_name || feedback.user?.username || "Unknown user"}
+                  </h3>
+                </div>
+                <Chip tone="Pending">Pending Review</Chip>
+              </div>
+              <p className="mt-4 text-sm leading-6 text-[#1F293B]">
+                {feedback.comment_body || "No feedback message recorded."}
+              </p>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-[#52627a]">
+                <span>{formatDateTime(feedback.created_at)}</span>
+                <span className="font-semibold">Comment #{feedback.comment_id}</span>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <EmptyState text="No feedback yet." />
+      )}
+    </Section>
+  );
 }
 
 function SignInRequiredPanel() {
