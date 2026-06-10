@@ -1,0 +1,397 @@
+{
+  "version": "2.0.0",
+  "darkMode": true,
+  "gridEnabling": false,
+  "currentViewName": null,
+  "defaultView": {
+    "detailLevel": "All",
+    "tablePositions": [
+      {
+        "name": "user_account",
+        "schemaName": "public",
+        "x": 688,
+        "y": 536
+      },
+      {
+        "name": "profile",
+        "schemaName": "public",
+        "x": 1160,
+        "y": 1000
+      },
+      {
+        "name": "role",
+        "schemaName": "public",
+        "x": 1304,
+        "y": 176
+      },
+      {
+        "name": "skill",
+        "schemaName": "public",
+        "x": 224,
+        "y": 1168
+      },
+      {
+        "name": "user_skill",
+        "schemaName": "public",
+        "x": 120,
+        "y": 888
+      },
+      {
+        "name": "qualification",
+        "schemaName": "public",
+        "x": 424,
+        "y": 896
+      },
+      {
+        "name": "user_qualification",
+        "schemaName": "public",
+        "x": 48,
+        "y": 552
+      },
+      {
+        "name": "availability",
+        "schemaName": "public",
+        "x": 768,
+        "y": 1240
+      },
+      {
+        "name": "task",
+        "schemaName": "public",
+        "x": 744,
+        "y": 48
+      },
+      {
+        "name": "organization",
+        "schemaName": "public",
+        "x": 1368,
+        "y": 504
+      },
+      {
+        "name": "task_skill",
+        "schemaName": "public",
+        "x": 344,
+        "y": 632
+      },
+      {
+        "name": "task_qualification",
+        "schemaName": "public",
+        "x": 136,
+        "y": 304
+      },
+      {
+        "name": "task_assignment",
+        "schemaName": "public",
+        "x": 1072,
+        "y": 400
+      },
+      {
+        "name": "task_assignment_request",
+        "schemaName": "public",
+        "x": 824,
+        "y": 912
+      },
+      {
+        "name": "notification",
+        "schemaName": "public",
+        "x": 416,
+        "y": 328
+      },
+      {
+        "name": "activity_log",
+        "schemaName": "public",
+        "x": 1072,
+        "y": 720
+      }
+    ],
+    "tableGroupCollapseStates": [],
+    "stickyNoteLayouts": [],
+    "referencePaths": [
+      {
+        "firstFieldNames": [
+          "role_id"
+        ],
+        "firstTableName": "role",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "role_id"
+        ],
+        "secondTableName": "user_account",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "user_id"
+        ],
+        "firstTableName": "user_account",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "user_id"
+        ],
+        "secondTableName": "profile",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "user_id"
+        ],
+        "firstTableName": "user_account",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "user_id"
+        ],
+        "secondTableName": "user_skill",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "skill_id"
+        ],
+        "firstTableName": "skill",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "skill_id"
+        ],
+        "secondTableName": "user_skill",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "user_id"
+        ],
+        "firstTableName": "user_account",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "user_id"
+        ],
+        "secondTableName": "user_qualification",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "qualification_id"
+        ],
+        "firstTableName": "qualification",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "qualification_id"
+        ],
+        "secondTableName": "user_qualification",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "user_id"
+        ],
+        "firstTableName": "user_account",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "user_id"
+        ],
+        "secondTableName": "availability",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "organization_id"
+        ],
+        "firstTableName": "organization",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "organization_id"
+        ],
+        "secondTableName": "task",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "task_id"
+        ],
+        "firstTableName": "task",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "task_id"
+        ],
+        "secondTableName": "task_skill",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "skill_id"
+        ],
+        "firstTableName": "skill",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "skill_id"
+        ],
+        "secondTableName": "task_skill",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "task_id"
+        ],
+        "firstTableName": "task",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "task_id"
+        ],
+        "secondTableName": "task_qualification",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "qualification_id"
+        ],
+        "firstTableName": "qualification",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "qualification_id"
+        ],
+        "secondTableName": "task_qualification",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "task_id"
+        ],
+        "firstTableName": "task",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "task_id"
+        ],
+        "secondTableName": "task_assignment",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "user_id"
+        ],
+        "firstTableName": "user_account",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "user_id"
+        ],
+        "secondTableName": "task_assignment",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "task_id"
+        ],
+        "firstTableName": "task",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "task_id"
+        ],
+        "secondTableName": "task_assignment_request",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "user_id"
+        ],
+        "firstTableName": "user_account",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "user_id"
+        ],
+        "secondTableName": "task_assignment_request",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "user_id"
+        ],
+        "firstTableName": "user_account",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "user_id"
+        ],
+        "secondTableName": "notification",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "user_id"
+        ],
+        "firstTableName": "user_account",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "user_id"
+        ],
+        "secondTableName": "activity_log",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "organization_id"
+        ],
+        "firstTableName": "organization",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "organization_id"
+        ],
+        "secondTableName": "user_account",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      }
+    ]
+  },
+  "views": {}
+}
