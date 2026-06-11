@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { Inter } from "next/font/google";
 import GradualBlur from "@/components/GradualBlur";
 import LaserFlow from "@/components/LaserFlow";
@@ -13,45 +14,59 @@ const inter = Inter({
   display: "swap",
 });
 
+const Lanyard = dynamic(() => import("@/components/Lanyard"), {
+  ssr: false,
+});
+
 export default function Home() {
   return (
     <main className={`${inter.className} overflow-x-hidden bg-black`}>
-      <section className="relative min-h-screen overflow-hidden">
-        <header className="absolute left-[18%] right-[18%] top-7 z-10 flex items-center justify-between">
-          <div className="flex items-center">
-            <Image
-              src={optimaLogo}
-              alt="Optima logo"
-              className="h-12 w-12 object-cover"
-              priority
-            />
-            <span className="text-md font-extrabold text-white">OPTIMA</span>
-          </div>
+      <section className="relative min-h-[140vh] overflow-hidden">
+        <header className="absolute inset-x-0 top-6 z-30">
+          <div className="mx-auto flex w-[65%] items-center justify-between">
+            <div className="flex shrink-0 items-center">
+              <Image
+                src={optimaLogo}
+                alt="Optima logo"
+                className="h-12 w-12 object-cover"
+                priority
+              />
+              <span className="text-md font-extrabold text-white">OPTIMA</span>
+            </div>
 
-          <nav
-            aria-label="Landing page navigation"
-            className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-full border border-white/20 bg-white/5 px-3 py-2 text-sm font-semibold text-white/80 shadow-[0_18px_60px_rgba(0,0,0,0.24)] backdrop-blur-md lg:flex"
-          >
-            {["Products", "Resources", "Community", "Pricing"].map((item) => (
-              <a
-                key={item}
-                href={`#${item.toLowerCase()}`}
-                className="rounded-full px-4 py-2 transition hover:bg-white/10 hover:text-white"
+            <nav
+              aria-label="Landing page navigation"
+              className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-full border border-white/20 bg-white/5 px-8 py-3 text-sm font-semibold text-white/80 shadow-[0_18px_60px_rgba(0,0,0,0.24)] backdrop-blur-md lg:flex"
+            >
+              {["Products", "Resources", "Community", "Pricing"].map((item) => (
+                <a
+                  key={item}
+                  href={`#${item.toLowerCase()}`}
+                  className="rounded-full px-4 py-2 transition hover:bg-white/10 hover:text-white"
+                >
+                  {item}
+                </a>
+              ))}
+            </nav>
+
+            <div className="flex shrink-0 items-center gap-4">
+              <Link
+                href="/login"
+                className="rounded-full border border-white/20 px-6 py-4 text-sm font-bold tracking-normal text-white transition hover:border-white/80 hover:bg-white/10"
               >
-                {item}
-              </a>
-            ))}
-          </nav>
-
-          <Link
-            href="/login"
-            className="rounded-full border border-white/25 px-6 py-4 text-sm font-bold uppercase tracking-normal text-white transition hover:border-white/70 hover:bg-white/10"
-          >
-            Log in
-          </Link>
+                Sign in
+              </Link>
+              <Link
+                href="/signup"
+                className="rounded-full border border-[#1E40AF]/20 bg-[#1E40AF]/20 px-6 py-4 text-sm font-bold tracking-normal text-white shadow-[0_0_22px_rgba(37,99,235,0.55)] transition hover:border-[#2563EB]/80 hover:bg-[#2563EB]/40 hover:shadow-[0_0_34px_rgba(37,99,235,0.75)]"
+              >
+                Experience
+              </Link>
+            </div>
+          </div>
         </header>
 
-        <div className="absolute left-[50%] -top-20 z-[10] h-[145.5vh] min-h-[360px] w-screen -translate-x-1/2 overflow-hidden">
+        <div className="pointer-events-none absolute left-[50%] -top-20 z-[10] h-[145.5vh] min-h-[360px] w-screen -translate-x-1/2 overflow-hidden">
           <LaserFlow
             horizontalBeamOffset={0.1}
             verticalBeamOffset={0}
@@ -72,22 +87,34 @@ export default function Home() {
           />
         </div>
 
-        <div className="absolute left-[18%] top-[30%] z-10 max-w-[780px]">
-          <h1 className="text-balance font-bold leading-[1.2] tracking-[0.8] md:text-3xl lg:text-6xl bg-[linear-gradient(90deg,#FFFFFF_0%,#FFFFFF_30%,#2563EB_45%,#000000_85%)] bg-clip-text text-transparent">
+        <div className="absolute left-[18%] top-[30%] z-10 max-w-[600px]">
+          <h1 className="text-background font-bold leading-[1.2] tracking-[0.8] md:text-3xl lg:text-6xl bg-[linear-gradient(90deg,#FFFFFF_0%,#FFFFFF_30%,#2563EB_45%,#000000_95%)] bg-clip-text text-transparent">
             Every Great Team Runs on Optima
           </h1>
+          <p className="mt-4 text-md font-light text-white">
+            One intelligent workspace for everything your team needs
+          </p>
           <Link
-            href="/signup"
-            className="mt-12 inline-flex h-14 min-w-56 items-center justify-center rounded-full border border-white/80 bg-white px-8 text-sm font-extrabold uppercase tracking-normal text-[#07183b] shadow-[0_0_22px_rgba(37,99,235,0.7),0_0_48px_rgba(37,99,235,0.45)] transition hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(37,99,235,0.9),0_0_72px_rgba(37,99,235,0.55)]"
+            href="/demo"
+            className="mt-12 inline-flex h-14 min-w-56 items-center justify-center rounded-full border border-white/80 bg-white px-8 text-sm font-bold uppercase tracking-normal text-[#1E293B] shadow-[0_0_22px_rgba(37,99,235,0.7),0_0_48px_rgba(37,99,235,0.45)] transition hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(37,99,235,0.9),0_0_72px_rgba(37,99,235,0.55)]"
           >
-            Get started <span className="ml-3 text-2xl leading-none">→</span>
+            Discover What&apos;s Possible <span className="ml-2 mb-1 text-2xl leading-none">→</span>
           </Link>
         </div>
 
         <section
           aria-label="Dashboard preview"
-          className="absolute left-1/2 top-[70vh] z-[6] h-[52vh] min-h-[360px] w-[65%] -translate-x-1/2 overflow-hidden rounded-t-[20px] border-2 border-[#2563EB] bg-[#120F17] shadow-[0_0_90px_rgba(37,99,235,0.9)]"
+          className="absolute left-1/2 top-[70vh] z-[6] h-[52vh] min-h-[360px] w-[65%] -translate-x-1/2 overflow-hidden rounded-[20px] border-2 border-[#2563EB] bg-[#120F17] shadow-[0_0_90px_rgba(37,99,235,0.9)]"
         />
+      </section>
+
+      <section
+        id="products"
+        className="relative overflow-hidden bg-[#120F17] px-6 py-20"
+      >
+        <div className="relative mx-auto h-[620px] w-[95%] overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-b from-[#30283e] to-[#17121f]">
+          <Lanyard color="#2563EB" />
+        </div>
       </section>
 
       <section
@@ -157,6 +184,7 @@ export default function Home() {
           zIndex={12}
         />
       </section>
+
     </main>
   );
 }
