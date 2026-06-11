@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { sideMenuNavigation } from "@/lib/sideMenuNavigation";
 import TopInformationBar from "@/components/TopInformationBar";
+import { useAppearance } from "@/components/appearance/AppearanceContext";
+import AppearancePanel from "@/components/appearance/AppearancePanel";
 
 function NavIcon({ name }) {
   const commonProps = {
@@ -121,11 +124,13 @@ function NavIcon({ name }) {
 export default function SideMenuLayout({ actor, children }) {
   const pathname = usePathname();
   const navigation = sideMenuNavigation[actor];
+  const { backgroundStyle } = useAppearance();
+  const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
 
   return (
-    <main className="h-screen overflow-hidden bg-[#C7DDEB] text-[#07183b]">
+    <main className="h-screen overflow-hidden text-[#07183b]" style={backgroundStyle}>
       <TopInformationBar actor={actor} />
-      <div className="flex h-[calc(100vh-3.5rem)] w-full gap-2 overflow-hidden bg-[#C7DDEB] pl-1 pb-2 pr-2 sm:pb-2 sm:pl-2 sm:pr-2 lg:pb-2 lg:pl-2 lg:pr-2">
+      <div className="flex h-[calc(100vh-3.5rem)] w-full gap-2 overflow-hidden pl-1 pb-2 pr-2 sm:pb-2 sm:pl-2 sm:pr-2 lg:pb-2 lg:pl-2 lg:pr-2">
         <div className="hidden w-16 shrink-0 flex-col z-50 justify-between md:flex">
           <aside className="group flex w-16 flex-col items-center rounded-[34px] bg-white/20 border border-white/60 py-6 backdrop-blur-sm shadow-sm transition-all duration-300 hover:w-56">
             <div className="flex w-full flex-col items-center gap-8">
@@ -162,12 +167,13 @@ export default function SideMenuLayout({ actor, children }) {
             </div>
           </aside>
 
-          <aside className="group flex w-16 flex-col items-center rounded-full bg-white/40 backdrop-blur-sm py-2 shadow-sm transition-all duration-300">
-            <Link
-              href="/login"
-              title="Log out"
-              aria-label="Log out"
-              className="flex h-12 w-[calc(100%-1rem)] items-center gap-3 rounded-2xl px-3 text-[#07183b] hover:bg-[#eef2f8]"
+          <aside className="group flex w-16 flex-col items-center rounded-full bg-white/40 backdrop-blur-sm py-2 shadow-sm transition-all duration-300 hover:w-56">
+            <button
+              type="button"
+              onClick={() => setIsAppearanceOpen(true)}
+              title="Appearance"
+              aria-label="Appearance"
+              className="flex h-12 w-[calc(100%-1rem)] items-center gap-3 rounded-2xl px-3 text-[#07183b] transition-colors hover:bg-[#eef2f8]"
             >
               <svg
                 className="h-5 w-5 shrink-0"
@@ -179,18 +185,25 @@ export default function SideMenuLayout({ actor, children }) {
                 strokeLinejoin="round"
                 aria-hidden="true"
               >
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <path d="M16 17l5-5-5-5" />
-                <path d="M21 12H9" />
+                <circle cx="13.5" cy="6.5" r="0.5" fill="currentColor" />
+                <circle cx="17.5" cy="10.5" r="0.5" fill="currentColor" />
+                <circle cx="8.5" cy="7.5" r="0.5" fill="currentColor" />
+                <circle cx="6.5" cy="12.5" r="0.5" fill="currentColor" />
+                <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125 0-.926.746-1.688 1.688-1.688H16.5c3.038 0 5.5-2.462 5.5-5.5C22 6.04 17.51 2 12 2Z" />
               </svg>
-            </Link>
+              <span className="hidden whitespace-nowrap text-sm font-bold group-hover:block">
+                Appearance
+              </span>
+            </button>
           </aside>
         </div>
-          
+
         <div className="min-h-0 min-w-0 flex-1">
           {children}
         </div>
       </div>
+
+      {isAppearanceOpen ? <AppearancePanel onClose={() => setIsAppearanceOpen(false)} /> : null}
     </main>
   );
 }

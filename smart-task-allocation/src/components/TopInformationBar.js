@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -296,6 +297,10 @@ export default function TopInformationBar({ actor }) {
     return "/useradmin/accounts";
   }
 
+  function logoHref() {
+    return sideMenuNavigation[actor]?.homeHref ?? "/";
+  }
+
   function closeSearch() {
     setIsSearchOpen(false);
     setQuery("");
@@ -325,7 +330,22 @@ export default function TopInformationBar({ actor }) {
   }
 
   return (
-    <div className="relative z-100 flex min-h-14 w-full items-center gap-4 bg-[#C7DDEB] px-4 py-1 sm:px-6 lg:px-8">
+    <div className="relative z-100 flex min-h-14 w-full items-center gap-4 bg-transparent px-4 py-1 sm:px-6 lg:px-8">
+      <Link
+        href={logoHref()}
+        className="relative z-10 flex h-11 w-11 shrink-0 items-center justify-center"
+        aria-label="Go to Optima home"
+        title="Optima"
+      >
+        <Image
+          src="/optimalogowhite.png"
+          alt="Optima"
+          width={32}
+          height={32}
+          className="h-8 w-8 object-contain"
+        />
+      </Link>
+
       <div className="absolute left-1/2 top-1/2 h-10 w-[min(34rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2">
         <span className="absolute left-3 top-1/2 z-10 -translate-y-1/2 text-[#61708a]">
           <SearchIcon />

@@ -1,5 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AppearanceProvider } from "@/components/appearance/AppearanceContext";
 
 /* eslint-disable @next/next/google-font-display, @next/next/no-page-custom-font */
 
@@ -30,7 +31,9 @@ export default function RootLayout({ children }) {
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=left_panel_close%2Cleft_panel_open&display=block"
         />
       </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <AppearanceProvider>{children}</AppearanceProvider>
+      </body>
     </html>
   );
 }

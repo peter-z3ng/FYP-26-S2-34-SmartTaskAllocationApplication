@@ -186,7 +186,7 @@ export default function AccountsPageContent() {
             {roleAccounts.map((account) => (
               <article
                 key={account.user_id}
-                className="w-full max-w-[280px] rounded-[24px] border-2 border-[#83A6CE] bg-[#E0E5E9] p-5 text-center shadow-sm"
+                className="w-full max-w-[280px] rounded-[24px] border border-white/60 bg-white/35 p-5 text-center shadow-sm backdrop-blur-md"
               >
                 <span
                   className={`inline-flex rounded-lg px-4 py-2 text-sm font-black uppercase tracking-widest ${
