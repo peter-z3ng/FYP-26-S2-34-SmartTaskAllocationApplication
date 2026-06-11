@@ -105,6 +105,24 @@ function UserIcon() {
   );
 }
 
+function BellIcon() {
+  return (
+    <svg
+      className="h-5 w-5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+    </svg>
+  );
+}
+
 export default function TopInformationBar({ actor }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -138,6 +156,17 @@ export default function TopInformationBar({ actor }) {
     () => dedupeSearchItems([...accountSearchItems, ...baseSearchItems]),
     [accountSearchItems, baseSearchItems],
   );
+
+  // Current page name, derived from the active route. Picks the longest matching
+  // nav href so nested routes still resolve to their section.
+  const currentPageName = useMemo(() => {
+    const items = sideMenuNavigation[actor]?.items ?? [];
+    const match = items
+      .filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+      .sort((a, b) => b.href.length - a.href.length)[0];
+
+    return match?.label ?? "";
+  }, [actor, pathname]);
 
   const searchResults = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -330,13 +359,8 @@ export default function TopInformationBar({ actor }) {
   }
 
   return (
-    <div className="relative z-100 flex min-h-14 w-full items-center gap-4 bg-transparent px-4 py-1 sm:px-6 lg:px-8">
-      <Link
-        href={logoHref()}
-        className="relative z-10 flex h-11 w-11 shrink-0 items-center justify-center"
-        aria-label="Go to Optima home"
-        title="Optima"
-      >
+    <div className="relative z-100 flex min-h-14 w-full items-center gap-4 bg-white/20 backdrop-blur-md px-2 py-1 sm:px-6 lg:px-6">
+
         <Image
           src="/optimalogowhite.png"
           alt="Optima"
@@ -344,7 +368,12 @@ export default function TopInformationBar({ actor }) {
           height={32}
           className="h-8 w-8 object-contain"
         />
-      </Link>
+
+        {currentPageName ? (
+          <span className="hidden whitespace-nowrap uppercase font-bold text-[#1E293B] sm:block">
+            {currentPageName}
+          </span>
+        ) : null}
 
       <div className="absolute left-1/2 top-1/2 h-10 w-[min(34rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2">
         <span className="absolute left-3 top-1/2 z-10 -translate-y-1/2 text-[#61708a]">
@@ -374,11 +403,12 @@ export default function TopInformationBar({ actor }) {
             setIsNotificationsOpen((current) => !current);
             setIsProfileOpen(false);
           }}
-          className="flex max-w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold text-[#07183b] transition hover:bg-white/70"
+          className="relative flex h-11 w-11 items-center justify-center rounded-full text-[#07183b] transition hover:bg-white/70"
           aria-label="Open notifications"
+          title="Workspace activity"
         >
-          <span className="h-2 w-2 shrink-0 rounded-full bg-[#0a72e8]" />
-          <span className="truncate">Workspace activity: task updates will appear here</span>
+          <BellIcon />
+          <span className="absolute right-2.5 top-2.5 h-2.5 w-2.5 rounded-full bg-[#0a72e8] ring-2 ring-white/70" />
         </button>
 
         {isNotificationsOpen ? (
