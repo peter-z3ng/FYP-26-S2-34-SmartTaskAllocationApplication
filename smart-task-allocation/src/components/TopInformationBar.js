@@ -8,11 +8,14 @@ import { sideMenuNavigation } from "@/lib/sideMenuNavigation";
 
 const roleActions = {
   platformadmin: [
-    { label: "Open home", href: "/dashboard", group: "Home" },
-    { label: "Manage organisations", href: "/dashboard#organisations", group: "Organisations" },
-    { label: "Manage users", href: "/dashboard#users", group: "Users" },
-    { label: "Manage roles", href: "/dashboard#roles", group: "Roles" },
-    { label: "Review settings", href: "/platformadmin/settings", group: "Settings" },
+    { label: "Open home", href: "/platformadmin", group: "Home" },
+    { label: "Manage homepage", href: "/platformadmin/homepage", group: "Homepage" },
+    { label: "View activity logs", href: "/platformadmin/activity-logs", group: "Activity Logs" },
+    { label: "Manage feedback", href: "/platformadmin/feedback", group: "Feedback" },
+    { label: "Analyse feedback", href: "/platformadmin/feedback-analysis", group: "Feedback" },
+    { label: "Manage subscription plans", href: "/platformadmin/subscriptions", group: "Subscriptions" },
+    { label: "Manage contact inquiries", href: "/platformadmin/contact-inquiries", group: "Support" },
+    { label: "Review profile", href: "/platformadmin/settings", group: "Profile" },
   ],
   manager: [
     { label: "Create workspace", href: "/manager/workspace", group: "Workspace" },

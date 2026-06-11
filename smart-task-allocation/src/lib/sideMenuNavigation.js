@@ -1,14 +1,16 @@
 export const sideMenuNavigation = {
   platformadmin: {
     label: "Platform Admin",
-    homeHref: "/dashboard",
+    homeHref: "/platformadmin",
     items: [
-      { label: "Home", href: "/dashboard", icon: "home" },
-      { label: "Organisations", href: "/dashboard#organisations", icon: "organization" },
-      { label: "Users", href: "/dashboard#users", icon: "users" },
-      { label: "Roles", href: "/dashboard#roles", icon: "workspace" },
+      { label: "Home", href: "/platformadmin", icon: "home" },
+      { label: "Homepage", href: "/platformadmin/homepage", icon: "home" },
       { label: "Activity Logs", href: "/platformadmin/activity-logs", icon: "logs" },
-      { label: "Settings", href: "/platformadmin/settings", icon: "settings" },
+      { label: "User Feedback", href: "/platformadmin/feedback", icon: "tasks" },
+      { label: "Feedback Analysis", href: "/platformadmin/feedback-analysis", icon: "workspace" },
+      { label: "Subscriptions", href: "/platformadmin/subscriptions", icon: "calendar" },
+      { label: "Contact Inquiries", href: "/platformadmin/contact-inquiries", icon: "users" },
+      { label: "Profile", href: "/platformadmin/settings", icon: "settings" },
     ],
   },
   useradmin: {
