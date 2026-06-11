@@ -4,10 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Inter } from "next/font/google";
-import GradualBlur from "@/components/GradualBlur";
 import LaserFlow from "@/components/LaserFlow";
-import optimaLogo from "@/public/optimalogowhite.png";
-import optimusImage from "@/public/optimus.jpg";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -26,8 +23,10 @@ export default function Home() {
           <div className="mx-auto flex w-[65%] items-center justify-between">
             <div className="flex shrink-0 items-center">
               <Image
-                src={optimaLogo}
+                src="/optimalogowhite.png"
                 alt="Optima logo"
+                width={48}
+                height={48}
                 className="h-12 w-12 object-cover"
                 priority
               />
@@ -87,7 +86,7 @@ export default function Home() {
           />
         </div>
 
-        <div className="absolute left-[18%] top-[30%] z-10 max-w-[600px]">
+        <div className="absolute left-[18%] top-[20%] z-10 max-w-[600px]">
           <h1 className="text-background font-bold leading-[1.2] tracking-[0.8] md:text-3xl lg:text-6xl bg-[linear-gradient(90deg,#FFFFFF_0%,#FFFFFF_30%,#2563EB_45%,#000000_95%)] bg-clip-text text-transparent">
             Every Great Team Runs on Optima
           </h1>
@@ -108,82 +107,30 @@ export default function Home() {
         />
       </section>
 
+      <section className="relative h-[400px] w-full bg-[#FFFFFF]"></section>
+
       <section
         id="products"
-        className="relative overflow-hidden bg-[#120F17] px-6 py-20"
+        className="relative overflow-hidden bg-[#FFFFFF] px-6"
       >
-        <div className="relative mx-auto h-[620px] w-[95%] overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-b from-[#30283e] to-[#17121f]">
-          <Lanyard color="#2563EB" />
+        <div className="relative mx-auto h-[620px] -left-[10%] w-[120%] overflow-hidden border-t border-t-neutral-300 bg-gradient-to-b from-[#FFFFFF] via-[#1E40AF] to-[#000000]">
+          <Lanyard
+            position={[0, 0, 20]}
+            gravity={[0, -40, 0]}
+            frontImage="/optimalogoblue.png"
+            backImage="/lanyardcard.png"
+            frontColor="#ffffff"
+            frontImageScale={0.55}
+            autoFlipInterval={3}
+            flipSpeed={2}
+            lanyardLogo="/optimalogowhite.png"
+            lanyardColor="#000000"
+            imageFit="contain"
+          />
         </div>
       </section>
 
-      <section
-        className="relative min-h-[1480px] overflow-hidden bg-[#120F17]"
-        style={{
-          backgroundImage: "radial-gradient(circle, rgba(180,142,214,0.22) 1.5px, transparent 1.5px)",
-          backgroundSize: "40px 40px",
-        }}
-      >
-        <div className="absolute inset-x-0 top-0 h-px bg-white/10" />
-
-        <div className="relative z-10 flex h-[460px] items-center justify-center px-8">
-          <h2 className="text-center text-7xl font-black leading-none tracking-normal text-[#b897d8] md:text-8xl">
-            Meet
-          </h2>
-        </div>
-
-        <div className="relative z-[4] mx-auto h-[600px] w-[40%] min-w-[300px] overflow-hidden rounded-[70px] border border-[#b897d8]/25 bg-black shadow-[0_0_90px_rgba(184,151,216,0.35)]">
-          <Image
-            src={optimusImage}
-            alt="Optimus reveal"
-            fill
-            className="object-cover"
-            sizes="1200px"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#120F17]/20" />
-          <GradualBlur
-            target="parent"
-            position="top"
-            height="8rem"
-            strength={10}
-            divCount={10}
-            curve="bezier"
-            exponential
-            opacity={2}
-            zIndex={8}
-          />
-          <GradualBlur
-            target="parent"
-            position="bottom"
-            height="10rem"
-            strength={5}
-            divCount={8}
-            curve="bezier"
-            exponential
-            opacity={1}
-            zIndex={8}
-          />
-        </div>
-
-        <div className="relative z-10 flex h-[340px] items-center justify-center px-8">
-          <h2 className="text-center text-7xl font-black leading-none tracking-normal text-[#b897d8] md:text-8xl">
-            Optimus
-          </h2>
-        </div>
-
-        <GradualBlur
-          target="parent"
-          position="bottom"
-          height="12rem"
-          strength={2.8}
-          divCount={8}
-          curve="bezier"
-          exponential
-          opacity={1}
-          zIndex={12}
-        />
-      </section>
+      <section className="relative h-[400px] w-full bg-[#000000]"></section>
 
     </main>
   );
