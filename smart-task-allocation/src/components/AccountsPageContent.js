@@ -54,6 +54,17 @@ export default function AccountsPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selected, setSelected] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [departmentFilter, setDepartmentFilter] = useState([]);
+  const [isDeptOpen, setIsDeptOpen] = useState(false);
+
+  function toggleDepartment(department) {
+    setDepartmentFilter((current) =>
+      current.includes(department)
+        ? current.filter((item) => item !== department)
+        : [...current, department],
+    );
+  }
 
   useEffect(() => {
     if (!selected) return;
@@ -128,19 +139,51 @@ export default function AccountsPageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const groupedAccounts = useMemo(() => {
+  const departmentOptions = useMemo(() => {
+    const names = new Set();
+    for (const account of accounts) {
+      names.add(account.department?.department_name ?? "No department");
+    }
+    return Array.from(names).sort();
+  }, [accounts]);
+
+  // Accounts after search + department filters (but before the status filter),
+  // so the status pill counts reflect the other active filters.
+  const searchAndDeptFiltered = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
-    const filtered = accounts.filter((account) => {
+    return accounts.filter((account) => {
       const searchable = `${account.full_name ?? ""} ${account.username} ${account.email} ${account.role?.role_name ?? ""} ${account.department?.department_name ?? ""}`;
-      return searchable.toLowerCase().includes(normalizedSearch);
+      if (!searchable.toLowerCase().includes(normalizedSearch)) return false;
+
+      if (departmentFilter.length) {
+        const department = account.department?.department_name ?? "No department";
+        if (!departmentFilter.includes(department)) return false;
+      }
+
+      return true;
     });
+  }, [accounts, search, departmentFilter]);
+
+  const statusCounts = useMemo(() => {
+    const counts = { All: searchAndDeptFiltered.length, Active: 0, Suspended: 0, Pending: 0 };
+    for (const account of searchAndDeptFiltered) {
+      if (account.account_status in counts) counts[account.account_status] += 1;
+    }
+    return counts;
+  }, [searchAndDeptFiltered]);
+
+  const groupedAccounts = useMemo(() => {
+    const filtered =
+      statusFilter === "All"
+        ? searchAndDeptFiltered
+        : searchAndDeptFiltered.filter((account) => account.account_status === statusFilter);
 
     return filtered.reduce((groups, account) => {
       const roleName = account.role?.role_name ?? "Unassigned";
       groups[roleName] = [...(groups[roleName] ?? []), account];
       return groups;
     }, {});
-  }, [accounts, search]);
+  }, [searchAndDeptFiltered, statusFilter]);
 
   function renderDetailCard() {
     if (!selected) return null;
@@ -230,6 +273,105 @@ export default function AccountsPageContent() {
         >
           Add Account
         </button>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {["All", "Active", "Suspended", "Pending"].map((status) => {
+          const active = statusFilter === status;
+          return (
+            <button
+              key={status}
+              type="button"
+              onClick={() => setStatusFilter(status)}
+              className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold transition ${
+                active
+                  ? "border-[#0D1E4C] bg-[#0D1E4C] text-white"
+                  : "border-white/60 bg-white/40 text-[#0A2540] hover:bg-white/60"
+              }`}
+            >
+              {status}
+              <span
+                className={`min-w-5 rounded-full px-1.5 text-center text-xs font-bold ${
+                  active ? "bg-white/25 text-white" : "bg-[#0D1E4C]/10 text-[#0D1E4C]"
+                }`}
+              >
+                {statusCounts[status]}
+              </span>
+            </button>
+          );
+        })}
+
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setIsDeptOpen((open) => !open)}
+            aria-expanded={isDeptOpen}
+            className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold transition ${
+              departmentFilter.length
+                ? "border-[#0D1E4C] bg-white/60 text-[#0A2540]"
+                : "border-white/60 bg-white/40 text-[#0A2540] hover:bg-white/60"
+            }`}
+          >
+            Department
+            {departmentFilter.length ? (
+              <span className="min-w-5 rounded-full bg-[#0D1E4C] px-1.5 text-center text-xs font-bold text-white">
+                {departmentFilter.length}
+              </span>
+            ) : null}
+            <svg
+              className={`h-4 w-4 transition-transform ${isDeptOpen ? "rotate-180" : ""}`}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
+
+          {isDeptOpen ? (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setIsDeptOpen(false)} />
+              <div className="absolute left-0 top-full z-20 mt-2 w-56 rounded-2xl border border-white/60 bg-white/85 p-2 shadow-[0_20px_50px_rgba(13,30,76,0.2)] backdrop-blur-xl">
+                <div className="max-h-60 overflow-y-auto">
+                  {departmentOptions.length ? (
+                    departmentOptions.map((department) => {
+                      const checked = departmentFilter.includes(department);
+                      return (
+                        <label
+                          key={department}
+                          className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-[#0B1B32] hover:bg-white/70"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleDepartment(department)}
+                            className="h-4 w-4 accent-[#0D1E4C]"
+                          />
+                          <span className="min-w-0 truncate">{department}</span>
+                        </label>
+                      );
+                    })
+                  ) : (
+                    <p className="px-2 py-2 text-xs text-[#94a3b8]">No departments</p>
+                  )}
+                </div>
+                {departmentFilter.length ? (
+                  <button
+                    type="button"
+                    onClick={() => setDepartmentFilter([])}
+                    className="mt-1 w-full rounded-lg px-2 py-1.5 text-left text-xs font-semibold text-[#64748B] hover:bg-white/70"
+                  >
+                    Clear selection
+                  </button>
+                ) : null}
+              </div>
+            </>
+          ) : null}
+        </div>
       </div>
 
       {error ? (
