@@ -238,13 +238,13 @@ export default function UserAdminOrganizationBuilder() {
 
   return (
     <div
-      className={`grid h-full min-h-0 overflow-hidden rounded-2xl border border-[#BBE1FA] bg-white shadow-sm transition-[grid-template-columns] ${
+      className={`grid h-full min-h-0 overflow-hidden rounded-2xl transition-[grid-template-columns] ${
         isSidebarCollapsed
           ? "lg:grid-cols-[40px_minmax(0,1fr)]"
           : "lg:grid-cols-[300px_minmax(0,1fr)]"
       }`}
     >
-      <aside className="relative overflow-visible bg-[#BBE1FA] px-3 py-4 shadow-md shadow-[#2563EB]">
+      <aside className="relative overflow-visible border-r border-white/40 px-3 py-4">
         <button
           type="button"
           onClick={() => setIsSidebarCollapsed((current) => !current)}
@@ -303,7 +303,7 @@ export default function UserAdminOrganizationBuilder() {
         )}
       </aside>
 
-      <section className="flex min-h-0 min-w-0 flex-col bg-white">
+      <section className="flex min-h-0 min-w-0 flex-col">
         {error ? (
           <p className="mx-6 mt-5 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
             {error}

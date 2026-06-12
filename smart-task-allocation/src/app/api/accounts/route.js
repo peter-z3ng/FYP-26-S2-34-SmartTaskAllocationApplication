@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUserAdmin } from "@/lib/serverAuth";
+import { getRequesterOrganizationId, requireUserAdmin } from "@/lib/serverAuth";
 import { getSupabaseAdminClient } from "@/lib/supabaseAdmin";
 
 function cleanString(value) {
@@ -9,17 +9,25 @@ function cleanString(value) {
 export async function GET(request) {
   try {
     const supabase = getSupabaseAdminClient();
-    const { error: authError } = await requireUserAdmin(request, supabase);
+    const { user, error: authError } = await requireUserAdmin(request, supabase);
 
     if (authError) {
       return NextResponse.json({ error: authError }, { status: 403 });
     }
 
+    // Scope to the requester's organization — never expose accounts from others.
+    const organizationId = await getRequesterOrganizationId(supabase, user);
+
+    if (!organizationId) {
+      return NextResponse.json({ accounts: [] });
+    }
+
     const { data, error } = await supabase
       .from("user_account")
       .select(
-        "user_id, username, email, account_status, role_id, organization_id, role:role_id(role_name), organization:organization_id(organization_name)",
+        "user_id, username, email, account_status, role_id, organization_id, department_id, role:role_id(role_name), organization:organization_id(organization_name), department:department_id(department_name)",
       )
+      .eq("organization_id", organizationId)
       .order("role_id", { ascending: true })
       .order("username", { ascending: true });
 
@@ -27,7 +35,32 @@ export async function GET(request) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json({ accounts: data ?? [] });
+    const accounts = data ?? [];
+
+    // full_name lives in the profile table (1:1 with user_account) — fetch and merge.
+    const userIds = accounts.map((account) => account.user_id);
+    let profilesByUserId = new Map();
+
+    if (userIds.length) {
+      const { data: profiles, error: profileError } = await supabase
+        .from("profile")
+        .select("user_id, full_name, profile_picture_url")
+        .in("user_id", userIds);
+
+      if (profileError) {
+        return NextResponse.json({ error: profileError.message }, { status: 400 });
+      }
+
+      profilesByUserId = new Map((profiles ?? []).map((profile) => [profile.user_id, profile]));
+    }
+
+    const accountsWithProfile = accounts.map((account) => ({
+      ...account,
+      full_name: profilesByUserId.get(account.user_id)?.full_name ?? null,
+      profile_picture_url: profilesByUserId.get(account.user_id)?.profile_picture_url ?? null,
+    }));
+
+    return NextResponse.json({ accounts: accountsWithProfile });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -36,7 +69,7 @@ export async function GET(request) {
 export async function PATCH(request) {
   try {
     const supabase = getSupabaseAdminClient();
-    const { error: authError } = await requireUserAdmin(request, supabase);
+    const { user, error: authError } = await requireUserAdmin(request, supabase);
 
     if (authError) {
       return NextResponse.json({ error: authError }, { status: 403 });
@@ -44,6 +77,23 @@ export async function PATCH(request) {
 
     const { userId, username, email, roleId, organizationId, accountStatus } =
       await request.json();
+
+    // The admin may only modify accounts inside their own organization.
+    const requesterOrgId = await getRequesterOrganizationId(supabase, user);
+    const { data: target } = await supabase
+      .from("user_account")
+      .select("user_id")
+      .eq("user_id", userId)
+      .eq("organization_id", requesterOrgId ?? "")
+      .maybeSingle();
+
+    if (!requesterOrgId || !target) {
+      return NextResponse.json(
+        { error: "Account not found in your organization." },
+        { status: 404 },
+      );
+    }
+
     const updates = {};
 
     if (username !== undefined) {
@@ -86,7 +136,7 @@ export async function PATCH(request) {
 export async function DELETE(request) {
   try {
     const supabase = getSupabaseAdminClient();
-    const { error: authError } = await requireUserAdmin(request, supabase);
+    const { user, error: authError } = await requireUserAdmin(request, supabase);
 
     if (authError) {
       return NextResponse.json({ error: authError }, { status: 403 });
@@ -97,6 +147,22 @@ export async function DELETE(request) {
 
     if (!userId) {
       return NextResponse.json({ error: "User ID is required." }, { status: 400 });
+    }
+
+    // The admin may only delete accounts inside their own organization.
+    const requesterOrgId = await getRequesterOrganizationId(supabase, user);
+    const { data: target } = await supabase
+      .from("user_account")
+      .select("user_id")
+      .eq("user_id", userId)
+      .eq("organization_id", requesterOrgId ?? "")
+      .maybeSingle();
+
+    if (!requesterOrgId || !target) {
+      return NextResponse.json(
+        { error: "Account not found in your organization." },
+        { status: 404 },
+      );
     }
 
     const { error: accountError } = await supabase

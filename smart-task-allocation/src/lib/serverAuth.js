@@ -17,6 +17,32 @@ export async function getAuthenticatedUser(request, supabase) {
   return { user: data.user };
 }
 
+// Resolve the organization the requester belongs to. Used to scope every
+// listing so an actor only ever sees users within their own organization.
+export async function getRequesterOrganizationId(supabase, user) {
+  const byId = await supabase
+    .from("user_account")
+    .select("organization_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (byId.data?.organization_id) {
+    return byId.data.organization_id;
+  }
+
+  if (user.email) {
+    const byEmail = await supabase
+      .from("user_account")
+      .select("organization_id")
+      .eq("email", user.email)
+      .maybeSingle();
+
+    return byEmail.data?.organization_id ?? null;
+  }
+
+  return null;
+}
+
 export async function getUserHomeRoute(user, supabase) {
   const { data: accountByUserId, error: accountByUserIdError } = await supabase
     .from("user_account")

@@ -142,7 +142,7 @@ export default function SideMenuLayout({ actor, children }) {
   return (
     <main className="h-screen overflow-hidden text-[#07183b]" style={backgroundStyle}>
       <TopInformationBar actor={actor} />
-      <div className="flex h-[calc(100vh-3.5rem)] w-full gap-2 overflow-hidden pl-1 pb-2 pr-2 sm:pb-2 sm:pl-2 sm:pr-2 lg:pb-2 lg:pl-2 lg:pr-2">
+      <div className="flex h-[calc(100vh-3.5rem)] w-full gap-2 overflow-hidden pt-6 pl-1 pb-6 pr-2 sm:pl-2 sm:pr-2 lg:pl-2 lg:pr-2">
         <div className="hidden w-16 shrink-0 flex-col z-50 justify-between md:flex">
           <aside className="group flex w-16 flex-col items-center rounded-[34px] bg-white/20 border border-white/60 py-6 backdrop-blur-sm shadow-sm transition-all duration-300 hover:w-56">
             <div className="flex w-full flex-col items-center gap-8">
