@@ -306,24 +306,26 @@ function OrganizationContextMenu({
           <span aria-hidden="true">›</span>
         </button>
 
-        <div className="invisible absolute left-full top-0 ml-2 min-w-56 rounded-2xl border border-white/60 bg-white/90 p-2 opacity-0 shadow-2xl backdrop-blur-md transition group-hover:visible group-hover:opacity-100">
-          {teams.length ? (
-            teams.map((team) => (
-              <button
-                key={team.team_id}
-                type="button"
-                disabled={account.user_id === currentUserId}
-                onClick={() => onInvite(team, account)}
-                className="block w-full rounded-xl px-3 py-3 text-left hover:bg-[#e8f3ff] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {team.team_name}
-              </button>
-            ))
-          ) : (
-            <p className="px-3 py-3 text-sm font-semibold text-[#667085]">
-              No owned teams yet.
-            </p>
-          )}
+        <div className="invisible absolute left-full top-0 pl-2 opacity-0 transition group-hover:visible group-hover:opacity-100">
+          <div className="min-w-56 rounded-2xl border border-white/60 bg-white/90 p-2 shadow-2xl backdrop-blur-md">
+            {teams.length ? (
+              teams.map((team) => (
+                <button
+                  key={team.team_id}
+                  type="button"
+                  disabled={account.user_id === currentUserId}
+                  onClick={() => onInvite(team, account)}
+                  className="block w-full rounded-xl px-3 py-3 text-left hover:bg-[#e8f3ff] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {team.team_name}
+                </button>
+              ))
+            ) : (
+              <p className="px-3 py-3 text-sm font-semibold text-[#667085]">
+                No owned teams yet.
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>
