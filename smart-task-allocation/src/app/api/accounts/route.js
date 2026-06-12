@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { getRequesterOrganizationId, requireUserAdmin } from "@/lib/serverAuth";
+import {
+  getRequesterOrganizationId,
+  isPlatformAdminRole,
+  isPlatformAdminRoleId,
+  requireUserAdmin,
+} from "@/lib/serverAuth";
 import { getSupabaseAdminClient } from "@/lib/supabaseAdmin";
 
 function cleanString(value) {
@@ -35,7 +40,10 @@ export async function GET(request) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    const accounts = data ?? [];
+    // Platform admins are not part of any organization's user management.
+    const accounts = (data ?? []).filter(
+      (account) => !isPlatformAdminRole(account.role?.role_name),
+    );
 
     // full_name lives in the profile table (1:1 with user_account) — fetch and merge.
     const userIds = accounts.map((account) => account.user_id);
@@ -78,19 +86,28 @@ export async function PATCH(request) {
     const { userId, username, email, roleId, organizationId, accountStatus } =
       await request.json();
 
-    // The admin may only modify accounts inside their own organization.
+    // The admin may only modify accounts inside their own organization, and
+    // never a Platform Admin account.
     const requesterOrgId = await getRequesterOrganizationId(supabase, user);
     const { data: target } = await supabase
       .from("user_account")
-      .select("user_id")
+      .select("user_id, role:role_id(role_name)")
       .eq("user_id", userId)
       .eq("organization_id", requesterOrgId ?? "")
       .maybeSingle();
 
-    if (!requesterOrgId || !target) {
+    if (!requesterOrgId || !target || isPlatformAdminRole(target.role?.role_name)) {
       return NextResponse.json(
         { error: "Account not found in your organization." },
         { status: 404 },
+      );
+    }
+
+    // Don't let a User Admin promote anyone into the Platform Admin role.
+    if (roleId !== undefined && (await isPlatformAdminRoleId(supabase, Number(roleId)))) {
+      return NextResponse.json(
+        { error: "User Admins cannot assign the Platform Admin role." },
+        { status: 403 },
       );
     }
 
@@ -149,16 +166,17 @@ export async function DELETE(request) {
       return NextResponse.json({ error: "User ID is required." }, { status: 400 });
     }
 
-    // The admin may only delete accounts inside their own organization.
+    // The admin may only delete accounts inside their own organization, and
+    // never a Platform Admin account.
     const requesterOrgId = await getRequesterOrganizationId(supabase, user);
     const { data: target } = await supabase
       .from("user_account")
-      .select("user_id")
+      .select("user_id, role:role_id(role_name)")
       .eq("user_id", userId)
       .eq("organization_id", requesterOrgId ?? "")
       .maybeSingle();
 
-    if (!requesterOrgId || !target) {
+    if (!requesterOrgId || !target || isPlatformAdminRole(target.role?.role_name)) {
       return NextResponse.json(
         { error: "Account not found in your organization." },
         { status: 404 },

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUserAdmin } from "@/lib/serverAuth";
+import { isPlatformAdminRole, requireUserAdmin } from "@/lib/serverAuth";
 import { getSupabaseAdminClient } from "@/lib/supabaseAdmin";
 
 function cleanString(value) {
@@ -39,19 +39,30 @@ function normalizeAccount(account, profilesByUserId) {
   };
 }
 
-async function getAccountsWithProfiles(supabase) {
-  const { data: accounts, error: accountsError } = await supabase
+async function getAccountsWithProfiles(supabase, organizationId) {
+  // Only ever surface accounts within the requester's organization, and never
+  // platform admins (developer-side, org-agnostic accounts).
+  if (!organizationId) {
+    return { accounts: [] };
+  }
+
+  const { data: accountRows, error: accountsError } = await supabase
     .from("user_account")
     .select(
       "user_id, username, email, account_status, organization_id, department_id, role:role_id(role_name), department:department_id(department_name)",
     )
+    .eq("organization_id", organizationId)
     .order("username", { ascending: true });
 
   if (accountsError) {
     return { accounts: [], error: accountsError };
   }
 
-  const userIds = (accounts ?? []).map((account) => account.user_id);
+  const accounts = (accountRows ?? []).filter(
+    (account) => !isPlatformAdminRole(account.role?.role_name),
+  );
+
+  const userIds = accounts.map((account) => account.user_id);
 
   if (!userIds.length) {
     return { accounts: [] };
@@ -78,7 +89,10 @@ async function getAccountsWithProfiles(supabase) {
 }
 
 async function getOrganizationPayload(supabase, account) {
-  const { accounts, error: accountsError } = await getAccountsWithProfiles(supabase);
+  const { accounts, error: accountsError } = await getAccountsWithProfiles(
+    supabase,
+    account?.organization_id,
+  );
 
   if (accountsError) {
     return { error: accountsError };

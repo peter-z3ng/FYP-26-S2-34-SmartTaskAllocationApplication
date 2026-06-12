@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUserAdmin } from "@/lib/serverAuth";
+import { isPlatformAdminRoleId, requireUserAdmin } from "@/lib/serverAuth";
 import { getSupabaseAdminClient } from "@/lib/supabaseAdmin";
 
 function cleanString(value) {
@@ -31,6 +31,13 @@ export async function POST(request) {
       return NextResponse.json(
         { error: "Email, username, password, and role are required." },
         { status: 400 },
+      );
+    }
+
+    if (await isPlatformAdminRoleId(supabase, numericRoleId)) {
+      return NextResponse.json(
+        { error: "User Admins cannot create Platform Admin accounts." },
+        { status: 403 },
       );
     }
 

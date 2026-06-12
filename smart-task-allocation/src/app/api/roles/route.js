@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUserAdmin } from "@/lib/serverAuth";
+import { isPlatformAdminRole, requireUserAdmin } from "@/lib/serverAuth";
 import { getSupabaseAdminClient } from "@/lib/supabaseAdmin";
 
 export async function GET(request) {
@@ -20,7 +20,10 @@ export async function GET(request) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json({ roles: data ?? [] });
+    // Platform Admin is developer-side and not manageable by User Admins.
+    const roles = (data ?? []).filter((role) => !isPlatformAdminRole(role.role_name));
+
+    return NextResponse.json({ roles });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

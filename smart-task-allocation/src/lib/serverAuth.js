@@ -17,6 +17,32 @@ export async function getAuthenticatedUser(request, supabase) {
   return { user: data.user };
 }
 
+// Platform admins are developer-side, org-agnostic accounts (they manage the
+// marketing site, not any organization), so they are excluded from the User
+// Admin account listings.
+export function isPlatformAdminRole(roleName) {
+  return (
+    typeof roleName === "string" &&
+    roleName.toLowerCase().replace(/[^a-z]/g, "") === "platformadmin"
+  );
+}
+
+// Resolve a role_id to whether it is the Platform Admin role, so User Admins
+// can't create/assign it regardless of the account's display name.
+export async function isPlatformAdminRoleId(supabase, roleId) {
+  if (roleId == null) {
+    return false;
+  }
+
+  const { data } = await supabase
+    .from("role")
+    .select("role_name")
+    .eq("role_id", roleId)
+    .maybeSingle();
+
+  return isPlatformAdminRole(data?.role_name);
+}
+
 // Resolve the organization the requester belongs to. Used to scope every
 // listing so an actor only ever sees users within their own organization.
 export async function getRequesterOrganizationId(supabase, user) {
