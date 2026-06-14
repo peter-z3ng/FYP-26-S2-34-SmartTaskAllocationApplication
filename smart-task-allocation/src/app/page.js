@@ -108,9 +108,23 @@ export default function Home() {
         />
       </section>
 
-      <section className="relative h-[400px] w-full bg-[#FFFFFF]"></section>
+      <section className="relative h-[400px] w-full bg-[#FFFFFF]">
+        <h1 className="absolute top-1/2 left-1/2 -translate-x-1/2 text-3xl text-black">&lt; Features Section &gt;</h1>
+      </section>
+
+      <section className="relative h-[400px] w-full bg-[#FFFFFF]">
+        <h1 className="absolute top-1/2 left-1/2 -translate-x-1/2 text-3xl text-black">&lt; Testimonials Section &gt;</h1>
+      </section>
+
+      <section className="relative h-[400px] w-full bg-[#FFFFFF]">
+        <h1 className="absolute top-1/2 left-1/2 -translate-x-1/2 text-3xl text-black">&lt; User Statistics Section &gt;</h1>
+      </section>
 
       <OrganizationLogoLoop />
+
+      <section className="relative h-[400px] w-full bg-[#FFFFFF]">
+        <h1 className="absolute top-1/2 left-1/2 -translate-x-1/2 text-3xl text-black">&lt; Pricing Section &gt;</h1>
+      </section>
 
       <section
         id="products"
@@ -156,7 +170,9 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="relative h-[400px] w-full bg-[#000000]"></section>
+      <section className="relative h-[400px] w-full bg-[#00000]">
+        <h1 className="absolute top-1/2 left-1/2 -translate-x-1/2 text-3xl text-white">&lt; Footer &gt;</h1>
+      </section>
 
     </main>
   );
