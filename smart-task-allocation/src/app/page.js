@@ -5,6 +5,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Inter } from "next/font/google";
 import LaserFlow from "@/components/LaserFlow";
+import OrganizationLogoLoop from "@/components/OrganizationLogoLoop";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -108,6 +109,8 @@ export default function Home() {
       </section>
 
       <section className="relative h-[400px] w-full bg-[#FFFFFF]"></section>
+
+      <OrganizationLogoLoop />
 
       <section
         id="products"
