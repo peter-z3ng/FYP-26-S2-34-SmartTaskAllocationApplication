@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseClient";
+import CornerNav from "@/components/CornerNav";
 
 const inputClass =
-  "h-14 w-full rounded-md border border-[#b8c4d8] bg-transparent px-4 text-base text-[#061a40] outline-none transition-colors placeholder:text-slate-400 focus:border-[#0a2a66] focus:ring-2 focus:ring-[#0a2a66]/20";
+  "h-14 w-full rounded-md border border-white/40 bg-black/40 px-4 text-base text-white outline-none transition-colors placeholder:text-white/40 focus:border-white/60 focus:ring-2 focus:ring-white/20";
 
 export default function AuthForm() {
   const router = useRouter();
@@ -76,7 +77,7 @@ export default function AuthForm() {
         if (result.exists) {
           setStep("password");
         } else {
-          setError("We couldn't find an account for that email. Ask your User Admin or sign up.");
+          setError("No account found for this email.");
         }
         return;
       }
@@ -112,10 +113,11 @@ export default function AuthForm() {
 
   return (
     <div className="w-full max-w-xl">
-      <section className="rounded-[28px] border border-white bg-white/85 px-8 py-10 shadow-[0_28px_80px_rgba(15,42,92,0.18)] sm:px-10">
+      <CornerNav onBack={step === "password" ? resetToEmailStep : undefined} />
+      <section className="rounded-[28px] border border-white/20 bg-white/10 px-8 py-10 shadow-[0_28px_80px_rgba(0,0,0,0.5)] backdrop-blur-2xl sm:px-10">
         <div className="flex justify-center">
           <Image
-            src="/optimalogoblue.png"
+            src="/optimalogowhite.png"
             alt="Optima"
             width={56}
             height={56}
@@ -123,12 +125,12 @@ export default function AuthForm() {
             priority
           />
         </div>
-        <h1 className="mt-4 text-center text-3xl font-bold text-[#061a40]">Sign in to Optima</h1>
+        <h1 className="mt-4 text-center text-3xl font-bold text-white">Sign in to Optima</h1>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           {step === "email" ? (
             <div className="space-y-3">
-              <label htmlFor="email" className="block text-base font-medium text-[#061a40]">
+              <label htmlFor="email" className="block text-base font-medium text-white/90">
                 Email
               </label>
               <input
@@ -146,19 +148,19 @@ export default function AuthForm() {
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between gap-3 rounded-md border border-[#dbe2ee] bg-[#f6f8fc] px-4 py-3">
-                <span className="min-w-0 truncate text-sm font-medium text-[#061a40]">{email}</span>
+              <div className="flex items-center justify-between gap-3 rounded-md border border-white/20 bg-white/10 px-4 py-3">
+                <span className="min-w-0 truncate text-sm font-medium text-white/90">{email}</span>
                 <button
                   type="button"
                   onClick={resetToEmailStep}
-                  className="shrink-0 text-sm font-semibold text-[#0a2a66] hover:underline"
+                  className="shrink-0 text-sm font-semibold text-white hover:underline"
                 >
                   Change
                 </button>
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="password" className="block text-base font-medium text-[#061a40]">
+                <label htmlFor="password" className="block text-base font-medium text-white/90">
                   Password
                 </label>
                 <input
@@ -168,7 +170,7 @@ export default function AuthForm() {
                   autoComplete="current-password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  placeholder="••••••••"
+                  placeholder="Enter password"
                   minLength={6}
                   required
                   autoFocus
@@ -178,7 +180,7 @@ export default function AuthForm() {
                   <button
                     type="button"
                     onClick={handleForgotPassword}
-                    className="text-sm font-semibold text-[#0a2a66] hover:underline"
+                    className="text-sm font-semibold text-white hover:underline"
                   >
                     Forgot password?
                   </button>
@@ -188,13 +190,13 @@ export default function AuthForm() {
           )}
 
           {error ? (
-            <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            <p className="pl-2 -mt-4 text-xs font-medium text-red-700">
               {error}
             </p>
           ) : null}
 
           {resetMessage ? (
-            <p className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+            <p className="pl-2 -mt-4 text-xs font-medium text-esmerald-700">
               {resetMessage}
             </p>
           ) : null}
@@ -202,26 +204,16 @@ export default function AuthForm() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="h-14 w-full rounded-md bg-[#0a2a66] text-base font-bold text-white transition-colors hover:bg-[#061a40] focus:outline-none focus:ring-2 focus:ring-[#0a2a66] focus:ring-offset-2 focus:ring-offset-white disabled:cursor-not-allowed disabled:opacity-70"
+            className="h-14 w-full rounded-full border border-white/20 bg-[#2563EB]/20 text-base uppercase font-bold text-white shadow-[0_8px_24px_rgba(37,99,235,0.60)] transition duration-200 hover:brightness-120 hover:shadow-[0_0_28px_rgba(37,99,235,0.6)] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSubmitting ? "Please wait..." : step === "email" ? "Continue" : "Sign in"}
+            {isSubmitting ? "Authenticating…" : step === "email" ? "Continue" : "Sign in"}
           </button>
         </form>
-
-        <div className="mt-8 space-y-4 text-center">
-          <p className="text-sm text-slate-600">Use the account provided by your User Admin.</p>
-          <Link
-            href="/"
-            className="inline-block text-lg font-bold text-[#0a2a66] transition-colors hover:text-[#061a40]"
-          >
-            Back to Home
-          </Link>
-        </div>
       </section>
 
-      <p className="mt-6 text-center text-base text-slate-600">
+      <p className="mt-6 text-center text-base text-white/80">
         Don&apos;t have an account?{" "}
-        <Link href="/signup" className="font-bold text-[#0a2a66] hover:text-[#061a40]">
+        <Link href="/signup" className="font-medium text-white transition hover:drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]">
           Sign up
         </Link>
       </p>

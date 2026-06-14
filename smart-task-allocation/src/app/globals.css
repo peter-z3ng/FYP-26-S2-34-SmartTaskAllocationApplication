@@ -25,6 +25,24 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Stop the browser from painting its white autofill background over dark
+   glass inputs. The inset box-shadow overrides the autofill bg, and
+   -webkit-text-fill-color keeps the typed text white. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: #ffffff;
+  caret-color: #ffffff;
+  -webkit-box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.4) inset;
+  box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.4) inset;
+  /* delay the autofill bg swap effectively forever so it never flashes */
+  transition: background-color 9999s ease-in-out 0s;
+}
+
 .material-symbols-outlined {
   font-family: "Material Symbols Outlined" !important;
   font-weight: normal;
