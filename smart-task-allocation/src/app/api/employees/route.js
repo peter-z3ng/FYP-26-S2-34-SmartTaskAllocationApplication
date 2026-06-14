@@ -57,6 +57,18 @@ export async function GET(request) {
     );
 
     const employeeIds = data.map((employee) => employee.user_id);
+
+    // Merge full_name from the profile table so the UI can show real names.
+    let fullNameByUserId = new Map();
+    if (employeeIds.length) {
+      const { data: profiles } = await supabase
+        .from("profile")
+        .select("user_id, full_name")
+        .in("user_id", employeeIds);
+      fullNameByUserId = new Map(
+        (profiles ?? []).map((profile) => [profile.user_id, profile.full_name]),
+      );
+    }
     const [{ data: skillRows, error: skillError }, { data: availabilityRows, error: availabilityError }] =
       employeeIds.length
         ? await Promise.all([
@@ -105,6 +117,7 @@ export async function GET(request) {
 
     const userAccounts = (data ?? []).map((employee) => ({
       ...employee,
+      full_name: fullNameByUserId.get(employee.user_id) ?? null,
       availability: availabilityByUserId.get(employee.user_id) ?? null,
       skills: skillsByUserId.get(employee.user_id) ?? [],
     }));

@@ -2651,7 +2651,7 @@ function formatDate(value) {
 }
 
 function getDisplayName(employee) {
-  return employee?.username || employee?.email || "Employee";
+  return employee?.full_name || employee?.username || employee?.email || "Employee";
 }
 
 function getInitials(employee) {

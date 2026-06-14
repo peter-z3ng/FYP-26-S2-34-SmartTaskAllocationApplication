@@ -10,7 +10,7 @@ const emptyForm = {
   organizationEmail: "",
   organizationType: "",
   logoUrl: "",
-  departments: [""],
+  departments: [{ id: null, name: "" }],
 };
 
 function initialFromName(name) {
@@ -127,7 +127,7 @@ export default function UserAdminOrganizationBuilder() {
     setForm((current) => ({
       ...current,
       departments: current.departments.map((department, departmentIndex) =>
-        departmentIndex === index ? value : department
+        departmentIndex === index ? { ...department, name: value } : department
       ),
     }));
   }
@@ -135,7 +135,7 @@ export default function UserAdminOrganizationBuilder() {
   function addDepartmentField() {
     setForm((current) => ({
       ...current,
-      departments: [...current.departments, ""],
+      departments: [...current.departments, { id: null, name: "" }],
     }));
   }
 
@@ -147,8 +147,14 @@ export default function UserAdminOrganizationBuilder() {
       organizationType: organization?.organization_type ?? "",
       logoUrl: organization?.logo_url ?? "",
       departments: departments.length
-        ? [...departments.map((department) => department.department_name), ""]
-        : [""],
+        ? [
+            ...departments.map((department) => ({
+              id: department.department_id,
+              name: department.department_name,
+            })),
+            { id: null, name: "" },
+          ]
+        : [{ id: null, name: "" }],
     });
     setIsSetupOpen(true);
   }
@@ -158,7 +164,7 @@ export default function UserAdminOrganizationBuilder() {
       ...current,
       departments:
         current.departments.length === 1
-          ? [""]
+          ? [{ id: null, name: "" }]
           : current.departments.filter((_, departmentIndex) => departmentIndex !== index),
     }));
   }
@@ -505,7 +511,7 @@ function OrganizationSetupModal({
           {form.departments.map((department, index) => (
             <div key={`department-${index}`} className="flex gap-2">
               <input
-                value={department}
+                value={department.name}
                 onChange={(event) => onUpdateDepartment(index, event.target.value)}
                 placeholder="Department optional"
                 className={`min-w-0 flex-1 ${fieldClass()}`}
