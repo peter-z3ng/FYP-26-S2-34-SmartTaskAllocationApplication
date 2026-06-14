@@ -145,9 +145,19 @@ Table workspace_member {
     joined_at timestamptz [not null, default: `now()`]
 }
 
+Table task_group {
+    group_id int [pk]
+    workspace_id uuid [not null, ref: > workspace.workspace_id]
+    group_name varchar [not null]
+    sort_order int [not null, default: 0]
+    created_at timestamptz [not null, default: `now()`]
+    updated_at timestamptz
+}
+
 Table task {
     task_id int [pk]
     organization_id uuid [not null, ref: > organization.organization_id]
+    group_id int [ref: > task_group.group_id]
     workspace_id uuid [ref: > workspace.workspace_id]
     title varchar [not null]
     description text
