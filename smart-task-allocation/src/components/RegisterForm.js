@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import CornerNav from "@/components/CornerNav";
 
 const inputClass =
@@ -28,7 +28,7 @@ function ErrorNote({ children }) {
 
 function InfoNote({ children }) {
   return (
-    <p className="pl-2 -mt-4 text-xs font-medium text-esmerald-700">
+    <p className="pl-2 -mt-4 text-xs font-medium text-blue-400">
       {children}
     </p>
   );
@@ -114,7 +114,7 @@ function AdminForm() {
       }
 
       setMessage("Account created. Redirecting to sign in...");
-      setTimeout(() => router.push("/login"), 1500);
+      setTimeout(() => router.push("/login"), 2000);
     } catch (signUpError) {
       setError(signUpError.message);
       setIsSubmitting(false);
@@ -204,87 +204,189 @@ function AdminForm() {
   );
 }
 
-function JoinForm() {
-  const [email, setEmail] = useState("");
+function JoinForm({ initialEmail = "" }) {
+  const router = useRouter();
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState(initialEmail);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [welcome, setWelcome] = useState(null); // { ok: boolean, text: string }
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Prefill the email once it becomes available (e.g. from the invite link
+  // session on the /accept-invite page).
+  useEffect(() => {
+    if (initialEmail) setEmail(initialEmail);
+  }, [initialEmail]);
+
+  // Live invitation lookup: when the email looks complete, check whether it has
+  // an invitation and greet the user with their organization name.
+  useEffect(() => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmed)) {
+      setWelcome(null);
+      return;
+    }
+
+    let active = true;
+    const handle = setTimeout(async () => {
+      try {
+        const response = await fetch("/api/invite-status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: trimmed }),
+        });
+        const result = await response.json();
+        if (!active) return;
+
+        if (response.ok && result.found && result.status !== "Active" && result.organizationName) {
+          setWelcome({ ok: true, text: `Welcome to ${result.organizationName}` });
+        } else if (response.ok && result.found && result.status === "Active") {
+          setWelcome({ ok: false, text: "This account is already registered. Please sign in instead." });
+        } else {
+          setWelcome({ ok: false, text: "No invitation found for this email." });
+        }
+      } catch {
+        if (active) setWelcome(null);
+      }
+    }, 450);
+
+    return () => {
+      active = false;
+      clearTimeout(handle);
+    };
+  }, [email]);
 
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
     setMessage("");
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/invite-status", {
+      const response = await fetch("/api/join-organization", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ fullName, email, password }),
       });
       const result = await response.json();
 
       if (!response.ok) {
-        setError(result.error || "Could not check that email.");
+        setError(result.error || "Could not complete your registration.");
+        setIsSubmitting(false);
         return;
       }
 
-      if (!result.found) {
-        setError(
-          "We couldn't find an invitation for that email. Ask your organization's admin to invite you.",
-        );
-        return;
-      }
-
-      if (result.status === "Active") {
-        setError("This email already has an active account. Please sign in instead.");
-        return;
-      }
-
-      setMessage(
-        "We found your invitation. Open the invitation link we emailed you to set your password and finish joining your organization.",
-      );
+      setMessage("You're all set. Redirecting to sign in...");
+      setTimeout(() => router.push("/login"), 2000);
     } catch (joinError) {
       setError(joinError.message);
-    } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <>
-      <form onSubmit={handleSubmit} className="mt-6 space-y-6">
-        <div className="space-y-3">
-          <label htmlFor="inviteEmail" className="block text-base font-medium text-white/90">
-            Invitation email
-          </label>
-          <input
-            id="inviteEmail"
-            name="inviteEmail"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="name@company.com"
-            required
-            autoFocus
-            className={inputClass}
-          />
-        </div>
+    <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+      <div className="space-y-3">
+        <label htmlFor="joinFullName" className="block text-base font-medium text-white/90">
+          Full Name
+        </label>
+        <input
+          id="joinFullName"
+          name="fullName"
+          type="text"
+          autoComplete="name"
+          value={fullName}
+          onChange={(event) => setFullName(event.target.value)}
+          placeholder="Your name"
+          required
+          autoFocus
+          className={inputClass}
+        />
+      </div>
 
-        {error ? <ErrorNote>{error}</ErrorNote> : null}
-        {message ? <InfoNote>{message}</InfoNote> : null}
+      <div className="space-y-3">
+        <label htmlFor="joinEmail" className="block text-base font-medium text-white/90">
+          Email
+        </label>
+        <input
+          id="joinEmail"
+          name="email"
+          type="email"
+          autoComplete="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder="name@company.com"
+          required
+          className={inputClass}
+        />
+        {welcome ? (
+          <p
+            className={`pl-2 text-sm font-medium ${
+              welcome.ok ? "text-blue-400" : "text-red-700"
+            }`}
+          >
+            {welcome.text}
+          </p>
+        ) : null}
+      </div>
 
-        <button type="submit" disabled={isSubmitting} className={submitButtonClass}>
-          {isSubmitting ? "Checking..." : "Check invitation"}
-        </button>
-      </form>
-    </>
+      <div className="space-y-3">
+        <label htmlFor="joinPassword" className="block text-base font-medium text-white/90">
+          Password
+        </label>
+        <input
+          id="joinPassword"
+          name="password"
+          type="password"
+          autoComplete="new-password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          placeholder="Create a password"
+          minLength={6}
+          required
+          className={inputClass}
+        />
+      </div>
+
+      <div className="space-y-3">
+        <label htmlFor="joinConfirmPassword" className="block text-base font-medium text-white/90">
+          Confirm Password
+        </label>
+        <input
+          id="joinConfirmPassword"
+          name="confirmPassword"
+          type="password"
+          autoComplete="new-password"
+          value={confirmPassword}
+          onChange={(event) => setConfirmPassword(event.target.value)}
+          placeholder="Re-enter your password"
+          minLength={6}
+          required
+          className={inputClass}
+        />
+      </div>
+
+      {error ? <ErrorNote>{error}</ErrorNote> : null}
+      {message ? <InfoNote>{message}</InfoNote> : null}
+
+      <button type="submit" disabled={isSubmitting} className={submitButtonClass}>
+        {isSubmitting ? "Joining..." : "Join organization"}
+      </button>
+    </form>
   );
 }
 
-export default function RegisterForm() {
-  const [mode, setMode] = useState("choose"); // "choose" | "admin" | "join"
+export default function RegisterForm({ initialMode = "choose", initialEmail = "" }) {
+  const [mode, setMode] = useState(initialMode); // "choose" | "admin" | "join"
 
   return (
     <div className={`mx-auto w-full ${mode === "choose" ? "max-w-2xl" : "max-w-xl"}`}>
@@ -304,7 +406,7 @@ export default function RegisterForm() {
 
         {mode === "choose" ? <Chooser onChoose={setMode} /> : null}
         {mode === "admin" ? <AdminForm /> : null}
-        {mode === "join" ? <JoinForm /> : null}
+        {mode === "join" ? <JoinForm initialEmail={initialEmail} /> : null}
       </section>
 
       <p className="mt-6 text-center text-base text-white/80">

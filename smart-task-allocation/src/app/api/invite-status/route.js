@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabaseAdmin";
 
-// Public, unauthenticated lookup used by the "Join an Organization" signup
-// flow. Given an email, reports whether an invitation/account exists for it so
-// the UI can guide the user to open their invite link (or tell them to ask
-// their admin). Returns only a coarse status, never any account details.
+// Public, unauthenticated lookup used by the unified "Join your organization"
+// signup form. Given an invited work email, reports whether an invitation
+// exists, its status, and the organization name so the form can greet the user
+// with "Welcome to {Organization}". Returns nothing sensitive.
 export async function POST(request) {
   try {
     const { email } = await request.json();
@@ -17,7 +17,7 @@ export async function POST(request) {
     const supabase = getSupabaseAdminClient();
     const { data, error } = await supabase
       .from("user_account")
-      .select("account_status")
+      .select("account_status, organization_id")
       .eq("email", cleanEmail)
       .maybeSingle();
 
@@ -25,11 +25,20 @@ export async function POST(request) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    // No row → never invited. Otherwise surface the lifecycle status so the UI
-    // can distinguish a pending invite from an already-active account.
+    let organizationName = null;
+    if (data?.organization_id) {
+      const { data: org } = await supabase
+        .from("organization")
+        .select("organization_name")
+        .eq("organization_id", data.organization_id)
+        .maybeSingle();
+      organizationName = org?.organization_name ?? null;
+    }
+
     return NextResponse.json({
       found: Boolean(data),
       status: data?.account_status ?? null,
+      organizationName,
     });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

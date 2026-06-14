@@ -38,8 +38,8 @@ export default function OrganizationLogoLoop() {
 
   return (
     <section className="relative w-full bg-white py-16">
-      <p className="mb-10 text-center text-sm font-semibold uppercase tracking-[0.25em] text-neutral-500">
-        Trusted by teams everywhere
+      <p className="mb-10 text-center text-md font-bold uppercase tracking-[0.25em] text-neutral-500">
+        Powering High-performing Teams
       </p>
       <LogoLoop
         logos={logos}
@@ -53,7 +53,7 @@ export default function OrganizationLogoLoop() {
         fadeOutColor="#ffffff"
         ariaLabel="Organizations using Optima"
         renderItem={(item) => (
-          <span className="inline-flex items-center gap-3 whitespace-nowrap text-xl font-semibold text-neutral-700">
+          <span className="inline-flex items-center gap-3 whitespace-nowrap text-xl font-semibold text-black">
             {item.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img

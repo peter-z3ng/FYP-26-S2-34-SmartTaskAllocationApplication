@@ -293,6 +293,9 @@ export const LaserFlow = ({
       logarithmicDepthBuffer: false
     });
     rendererRef.current = renderer;
+    // Some GPU drivers return null from getProgramInfoLog(), which makes
+    // three's shader-error debug check crash on `.trim()`. Disable it.
+    renderer.debug.checkShaderErrors = false;
 
     baseDprRef.current = Math.min(dpr ?? (window.devicePixelRatio || 1), 2);
     currentDprRef.current = baseDprRef.current;

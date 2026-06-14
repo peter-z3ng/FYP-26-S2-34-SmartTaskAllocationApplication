@@ -59,7 +59,12 @@ export default function Lanyard({
         camera={{ position: position, fov: fov }}
         dpr={[1, isMobile ? 1.5 : 2]}
         gl={{ alpha: transparent }}
-        onCreated={({ gl }) => gl.setClearColor(new THREE.Color(0x000000), transparent ? 0 : 1)}
+        onCreated={({ gl }) => {
+          // Avoid three's getProgramInfoLog().trim() crash on drivers that
+          // return null from the shader info log.
+          gl.debug.checkShaderErrors = false;
+          gl.setClearColor(new THREE.Color(0x000000), transparent ? 0 : 1);
+        }}
       >
         <ambientLight intensity={Math.PI} />
         <Physics gravity={gravity} timeStep={isMobile ? 1 / 30 : 1 / 60}>
