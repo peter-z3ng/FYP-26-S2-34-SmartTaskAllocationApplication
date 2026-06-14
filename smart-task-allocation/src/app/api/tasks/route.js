@@ -95,6 +95,7 @@ export async function POST(request) {
     const organizationId = await getManagerOrganizationId(supabase, user);
     const {
       workspaceId,
+      groupId,
       title,
       description,
       assignedTo,
@@ -126,6 +127,7 @@ export async function POST(request) {
     const { error } = await supabase.from("task").insert({
       organization_id: organizationId,
       workspace_id: workspaceId,
+      group_id: groupId ?? null,
       title: cleanString(title),
       description: cleanString(description) || null,
       owner_id: user.id,
@@ -164,6 +166,7 @@ export async function PATCH(request) {
       workspaceId,
       tasks,
       taskId,
+      groupId,
       title,
       description,
       assignedTo,
@@ -172,6 +175,23 @@ export async function PATCH(request) {
       startDatetime,
       endDatetime,
     } = body;
+
+    if (action === "move") {
+      if (!taskId) {
+        return NextResponse.json({ error: "Task ID is required." }, { status: 400 });
+      }
+
+      const { error: moveError } = await supabase
+        .from("task")
+        .update({ group_id: groupId ?? null, updated_at: new Date().toISOString() })
+        .eq("task_id", taskId);
+
+      if (moveError) {
+        return NextResponse.json({ error: moveError.message }, { status: 400 });
+      }
+
+      return NextResponse.json({ success: true });
+    }
 
     if (action === "reorder") {
       const orderedTasks = normalizeTaskOrder(tasks);
@@ -206,19 +226,22 @@ export async function PATCH(request) {
       return NextResponse.json({ success: true });
     }
 
-    const { error } = await supabase
-      .from("task")
-      .update({
-        title: cleanString(title),
-        description: cleanString(description) || null,
-        assigned_to: assignedTo || null,
-        status: cleanString(status) || "Open",
-        priority: cleanString(priority) || "Medium",
-        start_datetime: startDatetime || null,
-        end_datetime: endDatetime || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("task_id", taskId);
+    const taskUpdates = {
+      title: cleanString(title),
+      description: cleanString(description) || null,
+      assigned_to: assignedTo || null,
+      status: cleanString(status) || "Open",
+      priority: cleanString(priority) || "Medium",
+      start_datetime: startDatetime || null,
+      end_datetime: endDatetime || null,
+      updated_at: new Date().toISOString(),
+    };
+    // Only change the group when explicitly provided (move between groups).
+    if (groupId !== undefined) {
+      taskUpdates.group_id = groupId;
+    }
+
+    const { error } = await supabase.from("task").update(taskUpdates).eq("task_id", taskId);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });

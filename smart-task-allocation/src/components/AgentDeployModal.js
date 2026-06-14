@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 const STEPS = [
@@ -145,14 +146,70 @@ function edgeClass(state) {
   return "bg-white/10";
 }
 
-export default function AgentDeployModal({ agent, onClose }) {
-  const [phase, setPhase] = useState("form"); // "form" | "running"
+function StatusBadge({ status }) {
+  if (status === "active") {
+    return (
+      <span className="absolute -right-1.5 -top-1.5 rounded-full bg-[#0b1020] p-0.5">
+        <Spinner />
+      </span>
+    );
+  }
+  if (status === "done") {
+    return (
+      <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 ring-2 ring-[#0b1020]">
+        <svg className="h-3 w-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 6 9 17l-5-5" />
+        </svg>
+      </span>
+    );
+  }
+  return null;
+}
+
+// Circular agent avatar node (used by the Orchestrator / Optimus Blue flow).
+function AgentAvatarNode({ agent, status }) {
+  const ring =
+    status === "done"
+      ? "ring-emerald-400"
+      : status === "active"
+        ? "ring-[#2563EB] shadow-[0_0_26px_rgba(37,99,235,0.6)] animate-pulse"
+        : "ring-white/10";
+
+  return (
+    <div className="flex w-24 flex-col items-center gap-2">
+      <div
+        className={`relative h-16 w-16 overflow-hidden rounded-full bg-white/10 ring-2 ${ring} ${
+          status === "pending" ? "opacity-40" : ""
+        }`}
+      >
+        <Image src={agent.image} alt={agent.name} fill sizes="64px" className="object-cover object-top" />
+        <StatusBadge status={status} />
+      </div>
+      <span
+        className={`text-center text-[11px] font-bold leading-tight ${
+          status === "pending" ? "text-white/35" : "text-white/85"
+        }`}
+      >
+        {agent.name}
+      </span>
+    </div>
+  );
+}
+
+export default function AgentDeployModal({ agent, roster = [], onClose }) {
+  // Blue (Orchestrator) skips the project form and assembles agents right away.
+  const [phase, setPhase] = useState(agent.id === "blue" ? "running" : "form"); // "form" | "running"
   const [projectName, setProjectName] = useState("");
   const [teamSize, setTeamSize] = useState("");
   const [duration, setDuration] = useState("");
   const [currentStep, setCurrentStep] = useState(0);
 
-  const lastIndex = STEPS.length - 1;
+  // Optimus Blue (Orchestrator) assembles the other agents instead of running
+  // the linear team-build pipeline.
+  const isBlue = agent.id === "blue";
+  const otherAgents = isBlue ? roster.filter((a) => a.id !== agent.id) : [];
+
+  const lastIndex = isBlue ? otherAgents.length + 1 : STEPS.length - 1;
   const isFinished = phase === "running" && currentStep >= lastIndex;
 
   useEffect(() => {
@@ -292,37 +349,85 @@ export default function AgentDeployModal({ agent, onClose }) {
 
             {/* Automation flow canvas */}
             <div className="rounded-2xl border border-white/10 bg-[#0b1020] bg-[radial-gradient(rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:18px_18px] p-6">
-              {rows.map((indices, rowNumber) => {
-                const isReversed = rowNumber % 2 === 1;
-                return (
-                  <div key={rowNumber}>
-                    <div className="flex items-start">
-                      {indices.map((idx, position) => {
-                        // The connector that follows this node in flow order.
-                        const flowHigher = isReversed ? idx : idx + 1;
-                        const showEdge = position < indices.length - 1;
+              {isBlue ? (
+                <div className="flex flex-col items-center">
+                  {/* Source: Assembling agents */}
+                  <div className="flex w-32 flex-col items-center gap-2">
+                    <div
+                      className={`relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border ${
+                        currentStep === 0
+                          ? "border-[#2563EB] shadow-[0_0_26px_rgba(37,99,235,0.55)] animate-pulse"
+                          : "border-emerald-400/60"
+                      }`}
+                    >
+                      <Image src={agent.image} alt={agent.name} fill sizes="80px" className="object-cover object-top" />
+                      <StatusBadge status={currentStep === 0 ? "active" : "done"} />
+                    </div>
+                    <span className="text-center text-xs font-bold text-white/85">Assembling agents</span>
+                  </div>
+
+                  {/* stem from source */}
+                  <div
+                    className={`h-6 w-[3px] rounded-full ${edgeClass(
+                      currentStep === 0 ? "pending" : isFinished ? "done" : "active",
+                    )}`}
+                  />
+
+                  {/* distributor bus + agent avatars */}
+                  <div className="flex flex-col items-stretch">
+                    <div
+                      className={`mx-auto h-[3px] w-[78%] rounded-full ${edgeClass(
+                        currentStep === 0 ? "pending" : isFinished ? "done" : "active",
+                      )}`}
+                    />
+                    <div className="flex justify-center gap-6 sm:gap-12">
+                      {otherAgents.map((a, j) => {
+                        const flowIndex = j + 1;
+                        const st =
+                          currentStep > flowIndex ? "done" : currentStep === flowIndex ? "active" : "pending";
                         return (
-                          <div key={idx} className="flex items-start">
-                            <Node step={STEPS[idx]} status={statusOf(idx)} />
-                            {showEdge ? (
-                              <div className={`mt-8 h-[3px] w-10 rounded-full sm:w-16 ${edgeClass(edgeState(flowHigher))}`} />
-                            ) : null}
+                          <div key={a.id} className="flex flex-col items-center">
+                            <div className={`h-6 w-[3px] rounded-full ${edgeClass(st)}`} />
+                            <AgentAvatarNode agent={a} status={st} />
                           </div>
                         );
                       })}
                     </div>
-
-                    {/* vertical connector to the next row, aligned under the last flow node */}
-                    {rowNumber < rows.length - 1 ? (
-                      <div className={`flex ${isReversed ? "justify-start" : "justify-end"}`}>
-                        <div className="flex w-24 justify-center">
-                          <div className={`my-1 h-8 w-[3px] rounded-full ${edgeClass(edgeState((rowNumber + 1) * COLS))}`} />
-                        </div>
-                      </div>
-                    ) : null}
                   </div>
-                );
-              })}
+                </div>
+              ) : (
+                rows.map((indices, rowNumber) => {
+                  const isReversed = rowNumber % 2 === 1;
+                  return (
+                    <div key={rowNumber}>
+                      <div className="flex items-start">
+                        {indices.map((idx, position) => {
+                          // The connector that follows this node in flow order.
+                          const flowHigher = isReversed ? idx : idx + 1;
+                          const showEdge = position < indices.length - 1;
+                          return (
+                            <div key={idx} className="flex items-start">
+                              <Node step={STEPS[idx]} status={statusOf(idx)} />
+                              {showEdge ? (
+                                <div className={`mt-8 h-[3px] w-10 rounded-full sm:w-16 ${edgeClass(edgeState(flowHigher))}`} />
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* vertical connector to the next row, aligned under the last flow node */}
+                      {rowNumber < rows.length - 1 ? (
+                        <div className={`flex ${isReversed ? "justify-start" : "justify-end"}`}>
+                          <div className="flex w-24 justify-center">
+                            <div className={`my-1 h-8 w-[3px] rounded-full ${edgeClass(edgeState((rowNumber + 1) * COLS))}`} />
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })
+              )}
             </div>
 
             <button

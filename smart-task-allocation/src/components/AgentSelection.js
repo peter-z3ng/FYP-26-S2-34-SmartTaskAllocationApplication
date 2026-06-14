@@ -50,8 +50,8 @@ export default function AgentSelection() {
   const selected = AGENTS.find((agent) => agent.id === selectedId) ?? AGENTS[0];
 
   function handleLockIn(agent) {
-    // Optimus Red opens the guided team-build workflow; others just deploy.
-    if (agent.id === "red") {
+    // Red runs the team-build workflow; Blue orchestrates the other agents.
+    if (agent.id === "red" || agent.id === "blue") {
       setDeployAgent(agent);
       return;
     }
@@ -155,6 +155,7 @@ export default function AgentSelection() {
       {deployAgent ? (
         <AgentDeployModal
           agent={deployAgent}
+          roster={AGENTS}
           onClose={() => {
             setDeployedId(deployAgent.id);
             setDeployAgent(null);

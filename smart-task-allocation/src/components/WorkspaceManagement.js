@@ -53,16 +53,15 @@ export default function WorkspaceManagement() {
   const [isWorkspaceSidebarCollapsed, setIsWorkspaceSidebarCollapsed] = useState(false);
   const [isWorkspaceDetailsOpen, setIsWorkspaceDetailsOpen] = useState(false);
   const [workspaceEditName, setWorkspaceEditName] = useState("");
-  const [groupName, setGroupName] = useState("To-Do");
-  const [groupColor, setGroupColor] = useState(groupColors[0]);
+  const [groups, setGroups] = useState([]);
+  const [groupColorById, setGroupColorById] = useState({});
+  const [targetGroupId, setTargetGroupId] = useState(null);
   const [columns, setColumns] = useState(defaultColumns);
 
   const currentWorkspace = useMemo(
     () => workspaces.find((workspace) => workspace.workspace_id === selectedWorkspaceId),
     [selectedWorkspaceId, workspaces]
   );
-  const todoTasks = tasks.filter((task) => task.status !== "Completed");
-
   async function authHeaders() {
     const supabase = getSupabaseBrowserClient();
     const { data } = await supabase.auth.getSession();
@@ -90,6 +89,135 @@ export default function WorkspaceManagement() {
       setTasks(result.tasks);
     } catch (loadError) {
       setError(loadError.message);
+    }
+  }
+
+  async function loadGroups(workspaceId = selectedWorkspaceId) {
+    try {
+      if (!workspaceId) {
+        setGroups([]);
+        return;
+      }
+
+      const response = await fetch(`/api/task-groups?workspaceId=${workspaceId}`, {
+        headers: await authHeaders(),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Could not load task groups.");
+      }
+
+      // Every workspace starts with a default "To-Do" group.
+      if (!result.groups.length) {
+        const created = await createGroup(workspaceId, "To-Do");
+        setGroups(created ? [created] : []);
+        return;
+      }
+
+      setGroups(result.groups);
+    } catch (loadError) {
+      setError(loadError.message);
+    }
+  }
+
+  async function createGroup(workspaceId, groupName) {
+    const response = await fetch("/api/task-groups", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+      body: JSON.stringify({ workspaceId, groupName }),
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || "Could not create task group.");
+    }
+
+    return result.group;
+  }
+
+  async function addGroup() {
+    if (!selectedWorkspaceId) {
+      return;
+    }
+
+    setError("");
+    try {
+      const created = await createGroup(selectedWorkspaceId, "New Group");
+      if (created) {
+        setGroups((current) => [...current, created]);
+      }
+    } catch (groupError) {
+      setError(groupError.message);
+    }
+  }
+
+  async function renameGroup(groupId, groupName) {
+    setGroups((current) =>
+      current.map((group) =>
+        group.group_id === groupId ? { ...group, group_name: groupName } : group,
+      ),
+    );
+
+    try {
+      await fetch("/api/task-groups", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+        body: JSON.stringify({ groupId, groupName }),
+      });
+    } catch (groupError) {
+      setError(groupError.message);
+    }
+  }
+
+  async function deleteGroup(groupId) {
+    if (groups.length <= 1) {
+      setError("A workspace must keep at least one group.");
+      return;
+    }
+    if (!window.confirm("Delete this group? Its tasks move to the first group.")) {
+      return;
+    }
+
+    setError("");
+    try {
+      const response = await fetch(`/api/task-groups?groupId=${groupId}`, {
+        method: "DELETE",
+        headers: await authHeaders(),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Could not delete group.");
+      }
+
+      setGroups((current) => current.filter((group) => group.group_id !== groupId));
+      await loadTasks();
+    } catch (groupError) {
+      setError(groupError.message);
+    }
+  }
+
+  async function moveTaskToGroup(taskId, groupId) {
+    // Optimistic: reflect the move immediately, then persist.
+    setTasks((current) =>
+      current.map((task) => (task.task_id === taskId ? { ...task, group_id: groupId } : task)),
+    );
+
+    try {
+      const response = await fetch("/api/tasks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+        body: JSON.stringify({ action: "move", taskId, groupId }),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Could not move task.");
+      }
+    } catch (moveError) {
+      setError(moveError.message);
+      await loadTasks();
     }
   }
 
@@ -138,8 +266,10 @@ export default function WorkspaceManagement() {
     const timeout = setTimeout(() => {
       if (selectedWorkspaceId) {
         loadTasks(selectedWorkspaceId);
+        loadGroups(selectedWorkspaceId);
       } else {
         setTasks([]);
+        setGroups([]);
       }
     }, 0);
 
@@ -332,7 +462,7 @@ export default function WorkspaceManagement() {
           "Content-Type": "application/json",
           ...(await authHeaders()),
         },
-        body: JSON.stringify({ ...form, workspaceId: selectedWorkspaceId }),
+        body: JSON.stringify({ ...form, workspaceId: selectedWorkspaceId, groupId: targetGroupId }),
       });
       const result = await response.json();
 
@@ -450,8 +580,9 @@ export default function WorkspaceManagement() {
     }, 0);
   }
 
-  function startNewTask() {
+  function startNewTask(groupId = null) {
     setForm(emptyTask);
+    setTargetGroupId(groupId ?? groups[0]?.group_id ?? null);
     setIsAddingTask(false);
     setIsTaskOverlayOpen(true);
   }
@@ -689,41 +820,70 @@ export default function WorkspaceManagement() {
         <div className="min-h-0 flex-1 overflow-auto px-6 py-6">
           {currentWorkspace ? (
             <>
-            <TaskGroup
-              availableColumns={defaultColumns}
-              color={groupColor}
-              title={groupName}
-              columns={columns}
-              employees={employees}
-              currentWorkspace={currentWorkspace}
-              tasks={todoTasks}
-              isAddingTask={isAddingTask}
-              form={form}
-              groupColors={groupColors}
-              onColorChange={setGroupColor}
-              onColumnToggle={toggleColumn}
-              onGroupNameChange={setGroupName}
-              onUpdateField={updateField}
-              onSaveTask={saveTask}
-              onCancelTask={() => {
-                setForm(emptyTask);
-                setIsAddingTask(false);
-              }}
-              onAddTask={startNewTask}
-              onReorderTasks={reorderTasks}
-              onShareAccessChange={(linkAccess) =>
-                updateWorkspace(currentWorkspace.workspace_id, { linkAccess })
-              }
-              onTaskUpdate={updateTask}
-              onStatusChange={updateTaskStatus}
-            />
+            {groups.map((group, index) => {
+              const firstGroupId = groups[0]?.group_id;
+              const groupTasks = tasks.filter(
+                (task) =>
+                  task.group_id === group.group_id ||
+                  (group.group_id === firstGroupId && task.group_id == null),
+              );
+
+              return (
+                <TaskGroup
+                  key={group.group_id}
+                  availableColumns={defaultColumns}
+                  color={groupColorById[group.group_id] ?? groupColors[index % groupColors.length]}
+                  groupId={group.group_id}
+                  canDelete={groups.length > 1}
+                  onMoveTaskToGroup={moveTaskToGroup}
+                  onDeleteGroup={() => deleteGroup(group.group_id)}
+                  title={group.group_name}
+                  columns={columns}
+                  employees={employees}
+                  currentWorkspace={currentWorkspace}
+                  tasks={groupTasks}
+                  isAddingTask={false}
+                  form={form}
+                  groupColors={groupColors}
+                  onColorChange={(color) =>
+                    setGroupColorById((current) => ({ ...current, [group.group_id]: color }))
+                  }
+                  onColumnToggle={toggleColumn}
+                  onGroupNameChange={(name) => renameGroup(group.group_id, name)}
+                  onUpdateField={updateField}
+                  onSaveTask={saveTask}
+                  onCancelTask={() => {
+                    setForm(emptyTask);
+                    setIsAddingTask(false);
+                  }}
+                  onAddTask={() => startNewTask(group.group_id)}
+                  onReorderTasks={reorderTasks}
+                  onShareAccessChange={(linkAccess) =>
+                    updateWorkspace(currentWorkspace.workspace_id, { linkAccess })
+                  }
+                  onTaskUpdate={updateTask}
+                  onStatusChange={updateTaskStatus}
+                />
+              );
+            })}
+
+            <button
+              type="button"
+              onClick={addGroup}
+              className="mt-2 inline-flex items-center gap-2 rounded-lg border border-dashed border-[#c4ccdc] bg-white px-4 py-2 text-sm font-bold text-[#0a72e8] transition hover:bg-[#eef6ff]"
+            >
+              <span className="text-lg leading-none">+</span> Add group
+            </button>
+
             {isTaskOverlayOpen ? (
               <TaskCreationOverlay
                 columns={columns}
                 currentWorkspace={currentWorkspace}
                 employees={employees}
                 form={form}
-                groupTitle={groupName}
+                groupTitle={
+                  groups.find((group) => group.group_id === targetGroupId)?.group_name ?? "Task"
+                }
                 onCancel={() => {
                   setForm(emptyTask);
                   setIsTaskOverlayOpen(false);
@@ -1107,6 +1267,8 @@ function TaskGroup({
   availableColumns,
   color,
   title,
+  groupId,
+  canDelete,
   columns,
   employees,
   currentWorkspace,
@@ -1118,6 +1280,8 @@ function TaskGroup({
   onColorChange,
   onColumnToggle,
   onGroupNameChange,
+  onMoveTaskToGroup,
+  onDeleteGroup,
   onUpdateField,
   onSaveTask,
   onCancelTask,
@@ -1127,6 +1291,18 @@ function TaskGroup({
   onTaskUpdate,
   onStatusChange,
 }) {
+  const [isDropTargetGroup, setIsDropTargetGroup] = useState(false);
+
+  // A task dragged from another group lands here → move it into this group.
+  function handleGroupDrop(event) {
+    setIsDropTargetGroup(false);
+    const draggedId = event.dataTransfer.getData("application/task-id");
+    if (!draggedId) return;
+    const alreadyHere = tasks.some((task) => String(task.task_id) === draggedId);
+    if (alreadyHere) return; // same-group drops are reordering, handled by rows
+    const numericId = Number(draggedId);
+    onMoveTaskToGroup?.(Number.isNaN(numericId) ? draggedId : numericId, groupId);
+  }
   const [draggedTaskId, setDraggedTaskId] = useState(null);
   const [dragReadyTaskId, setDragReadyTaskId] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
@@ -1203,7 +1379,23 @@ function TaskGroup({
   }
 
   return (
-    <section className="mb-10 w-max min-w-full">
+    <section
+      className={`mb-10 w-max min-w-full rounded-xl transition ${
+        isDropTargetGroup ? "ring-2 ring-[#0a72e8] ring-offset-2" : ""
+      }`}
+      onDragOver={(event) => {
+        if (event.dataTransfer.types.includes("application/task-id")) {
+          event.preventDefault();
+          setIsDropTargetGroup(true);
+        }
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          setIsDropTargetGroup(false);
+        }
+      }}
+      onDrop={handleGroupDrop}
+    >
       <div className="mb-3 flex min-w-full items-center justify-between gap-4">
         <button
           type="button"
@@ -1276,10 +1468,15 @@ function TaskGroup({
           colors={groupColors}
           columns={columns}
           title={title}
+          canDelete={canDelete}
           onClose={() => setIsGroupSettingsOpen(false)}
           onColorChange={onColorChange}
           onColumnToggle={onColumnToggle}
           onTitleChange={onGroupNameChange}
+          onDelete={() => {
+            setIsGroupSettingsOpen(false);
+            onDeleteGroup?.();
+          }}
         />
       ) : null}
 
@@ -1336,6 +1533,7 @@ function TaskGroup({
               }}
               onDragStart={(event) => {
                 event.dataTransfer.effectAllowed = "move";
+                event.dataTransfer.setData("application/task-id", String(task.task_id));
                 setDraggedTaskId(task.task_id);
               }}
               onDrop={() => {
@@ -1509,10 +1707,12 @@ function GroupSettingsPopover({
   colors,
   columns,
   title,
+  canDelete,
   onClose,
   onColorChange,
   onColumnToggle,
   onTitleChange,
+  onDelete,
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#BBE1FA]/45 p-6">
@@ -1524,13 +1724,24 @@ function GroupSettingsPopover({
             className="h-12 min-w-0 flex-1 rounded-lg border border-[#c4ccdc] bg-white/82 px-4 text-xl font-bold outline-none focus:border-[#07183b]"
             aria-label="Group name"
           />
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-12 rounded-lg px-4 text-base font-bold text-[#667085] hover:bg-white/70"
-          >
-            Close
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            {canDelete ? (
+              <button
+                type="button"
+                onClick={onDelete}
+                className="h-12 rounded-lg px-4 text-base font-bold text-[#DF2F4A] hover:bg-[#fdecef]"
+              >
+                Delete group
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-12 rounded-lg px-4 text-base font-bold text-[#667085] hover:bg-white/70"
+            >
+              Close
+            </button>
+          </div>
         </div>
 
         <div className="grid gap-5 p-5 lg:grid-cols-[280px_minmax(0,1fr)]">
