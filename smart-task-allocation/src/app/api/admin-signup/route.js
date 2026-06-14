@@ -142,6 +142,18 @@ export async function POST(request) {
       return NextResponse.json({ error: accountError.message }, { status: 400 });
     }
 
+    // Store the full name on the profile so it shows across the admin pages.
+    if (cleanFullName) {
+      await supabase.from("profile").upsert(
+        {
+          profile_id: crypto.randomUUID(),
+          user_id: createdUserId,
+          full_name: cleanFullName,
+        },
+        { onConflict: "user_id" },
+      );
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
