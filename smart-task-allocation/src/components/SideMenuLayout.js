@@ -112,6 +112,20 @@ function NavIcon({ name }) {
     );
   }
 
+  if (name === "agents") {
+    return (
+      <svg {...commonProps}>
+        <rect x="4" y="8" width="16" height="11" rx="3" />
+        <path d="M12 4v4" />
+        <circle cx="12" cy="3" r="1" />
+        <path d="M9 13h.01" />
+        <path d="M15 13h.01" />
+        <path d="M2 13v2" />
+        <path d="M22 13v2" />
+      </svg>
+    );
+  }
+
   if (name === "appearance") {
     return (
       <svg {...commonProps}>

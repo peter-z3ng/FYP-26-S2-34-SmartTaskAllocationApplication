@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireManager } from "@/lib/serverAuth";
+import { isPlatformAdminRole, requireManager } from "@/lib/serverAuth";
 import { getSupabaseAdminClient } from "@/lib/supabaseAdmin";
 
 async function getManagerOrganizationId(supabase, user) {
@@ -32,23 +32,31 @@ export async function GET(request) {
     }
 
     const organizationId = await getManagerOrganizationId(supabase, user);
-    let query = supabase
+
+    // Accounts must belong to the requester's organization. If the requester
+    // has no organization, they can see no one (never expose null-org accounts).
+    if (!organizationId) {
+      return NextResponse.json({ user_accounts: [], employees: [] });
+    }
+
+    const { data: rawData, error } = await supabase
       .from("user_account")
       .select(
         "user_id, username, email, account_status, role:role_id(role_name), department:department_id(department_name)"
-      );
-
-    if (organizationId) {
-      query = query.eq("organization_id", organizationId);
-    }
-
-    const { data, error } = await query.order("username", { ascending: true });
+      )
+      .eq("organization_id", organizationId)
+      .order("username", { ascending: true });
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    const employeeIds = (data ?? []).map((employee) => employee.user_id);
+    // Platform admins are not part of any organization's roster.
+    const data = (rawData ?? []).filter(
+      (employee) => !isPlatformAdminRole(employee.role?.role_name),
+    );
+
+    const employeeIds = data.map((employee) => employee.user_id);
     const [{ data: skillRows, error: skillError }, { data: availabilityRows, error: availabilityError }] =
       employeeIds.length
         ? await Promise.all([
