@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { Inter } from "next/font/google";
 import LaserFlow from "@/components/LaserFlow";
 import OrganizationLogoLoop from "@/components/OrganizationLogoLoop";
+import FeatureShowcase from "@/components/FeatureShowcase";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -108,9 +109,7 @@ export default function Home() {
         />
       </section>
 
-      <section className="relative h-[400px] w-full bg-[#FFFFFF]">
-        <h1 className="absolute top-1/2 left-1/2 -translate-x-1/2 text-3xl text-black">&lt; Features Section &gt;</h1>
-      </section>
+      <FeatureShowcase />
 
       <section className="relative h-[400px] w-full bg-[#FFFFFF]">
         <h1 className="absolute top-1/2 left-1/2 -translate-x-1/2 text-3xl text-black">&lt; Testimonials Section &gt;</h1>
