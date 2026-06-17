@@ -1,199 +1,322 @@
 "use client";
 
-import { useEffect, useId, useLayoutEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 
-function hexToRgba(hex, alpha) {
-  const clean = hex.replace("#", "");
-  const full = clean.length === 3 ? clean.split("").map((c) => c + c).join("") : clean;
-  const r = parseInt(full.slice(0, 2), 16);
-  const g = parseInt(full.slice(2, 4), 16);
-  const b = parseInt(full.slice(4, 6), 16);
+function hexToRgba(hex, alpha = 1) {
+  if (!hex) return `rgba(0,0,0,${alpha})`;
+  let h = hex.replace("#", "");
+  if (h.length === 3) {
+    h = h
+      .split("")
+      .map((c) => c + c)
+      .join("");
+  }
+  const int = parseInt(h, 16);
+  const r = (int >> 16) & 255;
+  const g = (int >> 8) & 255;
+  const b = int & 255;
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-// Animated electric/flaming border. Wrap any element; the stroke is rendered as
-// a displaced, glowing outline driven by an animated SVG turbulence filter.
-export default function ElectricBorder({
+const ElectricBorder = ({
+  children,
   color = "#5227FF",
   speed = 1,
-  chaos = 1,
-  thickness = 2,
+  chaos = 0.12,
+  thickness = 1,
+  borderRadius = 24,
   showOnHover = false,
-  className = "",
+  className,
   style,
-  children,
-}) {
-  const rawId = useId().replace(/[:]/g, "");
-  const filterId = `electric-${rawId}`;
-  const svgRef = useRef(null);
-  const rootRef = useRef(null);
-  const strokeRef = useRef(null);
+}) => {
+  const canvasRef = useRef(null);
+  const containerRef = useRef(null);
+  const animationRef = useRef(null);
+  const timeRef = useRef(0);
+  const lastFrameTimeRef = useRef(0);
 
-  const updateAnim = () => {
-    const svg = svgRef.current;
-    const host = rootRef.current;
-    if (!svg || !host) return;
-
-    if (strokeRef.current) {
-      strokeRef.current.style.filter = `url(#${filterId})`;
-    }
-
-    const width = Math.max(1, Math.round(host.clientWidth || host.getBoundingClientRect().width || 0));
-    const height = Math.max(1, Math.round(host.clientHeight || host.getBoundingClientRect().height || 0));
-
-    const dyAnims = Array.from(svg.querySelectorAll('feOffset > animate[attributeName="dy"]'));
-    if (dyAnims.length >= 2) {
-      dyAnims[0].setAttribute("values", `${height}; 0`);
-      dyAnims[1].setAttribute("values", `0; -${height}`);
-    }
-
-    const dxAnims = Array.from(svg.querySelectorAll('feOffset > animate[attributeName="dx"]'));
-    if (dxAnims.length >= 2) {
-      dxAnims[0].setAttribute("values", `${width}; 0`);
-      dxAnims[1].setAttribute("values", `0; -${width}`);
-    }
-
-    const dur = Math.max(0.001, 6 / (speed || 1));
-    [...dyAnims, ...dxAnims].forEach((anim) => anim.setAttribute("dur", `${dur}s`));
-
-    const disp = svg.querySelector("feDisplacementMap");
-    if (disp) disp.setAttribute("scale", String(30 * (chaos || 1)));
-
-    requestAnimationFrame(() => {
-      [...dyAnims, ...dxAnims].forEach((anim) => {
-        if (typeof anim.beginElement === "function") {
-          try {
-            anim.beginElement();
-          } catch {
-            // some browsers throw if not yet in document; safe to ignore
-          }
-        }
-      });
-    });
-  };
-
-  useEffect(() => {
-    updateAnim();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [speed, chaos]);
-
-  useLayoutEffect(() => {
-    if (!rootRef.current) return undefined;
-    const observer = new ResizeObserver(() => updateAnim());
-    observer.observe(rootRef.current);
-    updateAnim();
-    return () => observer.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const random = useCallback((x) => {
+    return (Math.sin(x * 12.9898) * 43758.5453) % 1;
   }, []);
 
-  const inheritRadius = { borderRadius: style?.borderRadius ?? "inherit" };
-  const strokeStyle = {
-    ...inheritRadius,
-    borderWidth: thickness,
-    borderStyle: "solid",
-    borderColor: color,
-    filter: `url(#${filterId})`,
-  };
-  const glow1 = {
-    ...inheritRadius,
-    borderWidth: thickness,
-    borderStyle: "solid",
-    borderColor: hexToRgba(color, 0.6),
-    filter: "blur(1px)",
-    opacity: 0.6,
-  };
-  const glow2 = {
-    ...inheritRadius,
-    borderWidth: thickness + 1,
-    borderStyle: "solid",
-    borderColor: color,
-    filter: "blur(6px)",
-    opacity: 0.8,
-  };
-  // Wider, hotter bloom for a flaming look.
-  const glow3 = {
-    ...inheritRadius,
-    borderWidth: thickness + 2,
-    borderStyle: "solid",
-    borderColor: color,
-    filter: "blur(16px)",
-    opacity: 0.7,
-  };
-  const bgGlow = {
-    ...inheritRadius,
-    transform: "scale(1.1)",
-    filter: "blur(42px)",
-    opacity: 0.55,
-    zIndex: -1,
-    background: `linear-gradient(-30deg, ${hexToRgba(color, 0.9)}, transparent, ${color})`,
-  };
+  const noise2D = useCallback(
+    (x, y) => {
+      const i = Math.floor(x);
+      const j = Math.floor(y);
+      const fx = x - i;
+      const fy = y - j;
+
+      const a = random(i + j * 57);
+      const b = random(i + 1 + j * 57);
+      const c = random(i + (j + 1) * 57);
+      const d = random(i + 1 + (j + 1) * 57);
+
+      const ux = fx * fx * (3.0 - 2.0 * fx);
+      const uy = fy * fy * (3.0 - 2.0 * fy);
+
+      return a * (1 - ux) * (1 - uy) + b * ux * (1 - uy) + c * (1 - ux) * uy + d * ux * uy;
+    },
+    [random]
+  );
+
+  const octavedNoise = useCallback(
+    (x, octaves, lacunarity, gain, baseAmplitude, baseFrequency, time, seed, baseFlatness) => {
+      let y = 0;
+      let amplitude = baseAmplitude;
+      let frequency = baseFrequency;
+
+      for (let i = 0; i < octaves; i++) {
+        let octaveAmplitude = amplitude;
+        if (i === 0) {
+          octaveAmplitude *= baseFlatness;
+        }
+        y += octaveAmplitude * noise2D(frequency * x + seed * 100, time * frequency * 0.3);
+        frequency *= lacunarity;
+        amplitude *= gain;
+      }
+
+      return y;
+    },
+    [noise2D]
+  );
+
+  const getCornerPoint = useCallback((centerX, centerY, radius, startAngle, arcLength, progress) => {
+    const angle = startAngle + progress * arcLength;
+    return {
+      x: centerX + radius * Math.cos(angle),
+      y: centerY + radius * Math.sin(angle),
+    };
+  }, []);
+
+  const getRoundedRectPoint = useCallback(
+    (t, left, top, width, height, radius) => {
+      const straightWidth = width - 2 * radius;
+      const straightHeight = height - 2 * radius;
+      const cornerArc = (Math.PI * radius) / 2;
+      const totalPerimeter = 2 * straightWidth + 2 * straightHeight + 4 * cornerArc;
+      const distance = t * totalPerimeter;
+
+      let accumulated = 0;
+
+      if (distance <= accumulated + straightWidth) {
+        const progress = (distance - accumulated) / straightWidth;
+        return { x: left + radius + progress * straightWidth, y: top };
+      }
+      accumulated += straightWidth;
+
+      if (distance <= accumulated + cornerArc) {
+        const progress = (distance - accumulated) / cornerArc;
+        return getCornerPoint(left + width - radius, top + radius, radius, -Math.PI / 2, Math.PI / 2, progress);
+      }
+      accumulated += cornerArc;
+
+      if (distance <= accumulated + straightHeight) {
+        const progress = (distance - accumulated) / straightHeight;
+        return { x: left + width, y: top + radius + progress * straightHeight };
+      }
+      accumulated += straightHeight;
+
+      if (distance <= accumulated + cornerArc) {
+        const progress = (distance - accumulated) / cornerArc;
+        return getCornerPoint(left + width - radius, top + height - radius, radius, 0, Math.PI / 2, progress);
+      }
+      accumulated += cornerArc;
+
+      if (distance <= accumulated + straightWidth) {
+        const progress = (distance - accumulated) / straightWidth;
+        return { x: left + width - radius - progress * straightWidth, y: top + height };
+      }
+      accumulated += straightWidth;
+
+      if (distance <= accumulated + cornerArc) {
+        const progress = (distance - accumulated) / cornerArc;
+        return getCornerPoint(left + radius, top + height - radius, radius, Math.PI / 2, Math.PI / 2, progress);
+      }
+      accumulated += cornerArc;
+
+      if (distance <= accumulated + straightHeight) {
+        const progress = (distance - accumulated) / straightHeight;
+        return { x: left, y: top + height - radius - progress * straightHeight };
+      }
+      accumulated += straightHeight;
+
+      const progress = (distance - accumulated) / cornerArc;
+      return getCornerPoint(left + radius, top + radius, radius, Math.PI, Math.PI / 2, progress);
+    },
+    [getCornerPoint]
+  );
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const octaves = 10;
+    const lacunarity = 1.6;
+    const gain = 0.7;
+    const amplitude = chaos;
+    const frequency = 10;
+    const baseFlatness = 0;
+    const displacement = 60;
+    const borderOffset = 60;
+
+    const updateSize = () => {
+      const rect = container.getBoundingClientRect();
+      const width = rect.width + borderOffset * 2;
+      const height = rect.height + borderOffset * 2;
+
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      ctx.scale(dpr, dpr);
+
+      return { width, height };
+    };
+
+    let { width, height } = updateSize();
+    let lastDpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    const drawElectricBorder = (currentTime) => {
+      if (!canvas || !ctx) return;
+
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      if (dpr !== lastDpr) {
+        lastDpr = dpr;
+        const newSize = updateSize();
+        width = newSize.width;
+        height = newSize.height;
+      }
+
+      const deltaTime = (currentTime - lastFrameTimeRef.current) / 1000;
+      timeRef.current += deltaTime * speed;
+      lastFrameTimeRef.current = currentTime;
+
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.scale(dpr, dpr);
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = thickness;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      const scale = displacement;
+      const left = borderOffset;
+      const top = borderOffset;
+      const borderWidth = width - 2 * borderOffset;
+      const borderHeight = height - 2 * borderOffset;
+      const maxRadius = Math.min(borderWidth, borderHeight) / 2;
+      const radius = Math.min(borderRadius, maxRadius);
+
+      const approximatePerimeter = 2 * (borderWidth + borderHeight) + 2 * Math.PI * radius;
+      const sampleCount = Math.floor(approximatePerimeter / 2);
+
+      ctx.beginPath();
+
+      for (let i = 0; i <= sampleCount; i++) {
+        const progress = i / sampleCount;
+
+        const point = getRoundedRectPoint(progress, left, top, borderWidth, borderHeight, radius);
+
+        const xNoise = octavedNoise(
+          progress * 8,
+          octaves,
+          lacunarity,
+          gain,
+          amplitude,
+          frequency,
+          timeRef.current,
+          0,
+          baseFlatness
+        );
+        const yNoise = octavedNoise(
+          progress * 8,
+          octaves,
+          lacunarity,
+          gain,
+          amplitude,
+          frequency,
+          timeRef.current,
+          1,
+          baseFlatness
+        );
+
+        const displacedX = point.x + xNoise * scale;
+        const displacedY = point.y + yNoise * scale;
+
+        if (i === 0) {
+          ctx.moveTo(displacedX, displacedY);
+        } else {
+          ctx.lineTo(displacedX, displacedY);
+        }
+      }
+
+      ctx.closePath();
+      ctx.stroke();
+
+      animationRef.current = requestAnimationFrame(drawElectricBorder);
+    };
+
+    const resizeObserver = new ResizeObserver(() => {
+      const newSize = updateSize();
+      width = newSize.width;
+      height = newSize.height;
+    });
+    resizeObserver.observe(container);
+
+    animationRef.current = requestAnimationFrame(drawElectricBorder);
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+      resizeObserver.disconnect();
+    };
+  }, [color, speed, chaos, thickness, borderRadius, octavedNoise, getRoundedRectPoint]);
+
+  const hoverClass = showOnHover
+    ? "opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+    : "";
 
   return (
-    <div ref={rootRef} className={`group relative isolate ${className}`} style={style}>
-      <svg
-        ref={svgRef}
-        className="pointer-events-none fixed -left-[10000px] -top-[10000px] h-[10px] w-[10px] opacity-[0.001]"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <defs>
-          <filter id={filterId} colorInterpolationFilters="sRGB" x="-20%" y="-20%" width="140%" height="140%">
-            <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="10" result="noise1" seed="1" />
-            <feOffset in="noise1" dx="0" dy="0" result="offset1">
-              <animate attributeName="dy" values="700; 0" dur="6s" repeatCount="indefinite" calcMode="linear" />
-            </feOffset>
-            <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="10" result="noise2" seed="1" />
-            <feOffset in="noise2" dx="0" dy="0" result="offset2">
-              <animate attributeName="dy" values="0; -700" dur="6s" repeatCount="indefinite" calcMode="linear" />
-            </feOffset>
-            <feBlend in="offset1" in2="offset2" mode="color-dodge" result="part1" />
-
-            <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="10" result="noise3" seed="2" />
-            <feOffset in="noise3" dx="0" dy="0" result="offset3">
-              <animate attributeName="dx" values="490; 0" dur="6s" repeatCount="indefinite" calcMode="linear" />
-            </feOffset>
-            <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="10" result="noise4" seed="2" />
-            <feOffset in="noise4" dx="0" dy="0" result="offset4">
-              <animate attributeName="dx" values="0; -490" dur="6s" repeatCount="indefinite" calcMode="linear" />
-            </feOffset>
-            <feBlend in="offset3" in2="offset4" mode="color-dodge" result="part2" />
-
-            <feBlend in="part1" in2="part2" mode="color-dodge" result="combinedNoise" />
-            <feDisplacementMap
-              in="SourceGraphic"
-              in2="combinedNoise"
-              scale="30"
-              xChannelSelector="R"
-              yChannelSelector="B"
-            />
-          </filter>
-        </defs>
-      </svg>
-
+    <div
+      ref={containerRef}
+      className={`group relative isolate overflow-visible ${className ?? ""}`}
+      style={{ "--electric-border-color": color, borderRadius, ...style }}
+    >
       <div
-        className={`absolute inset-0 ${
-          showOnHover
-            ? "opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-            : ""
-        }`}
-        style={inheritRadius}
+        className={`pointer-events-none absolute left-1/2 top-1/2 z-[2] -translate-x-1/2 -translate-y-1/2 ${hoverClass}`}
       >
-        <div ref={strokeRef} className="absolute inset-0 box-border" style={strokeStyle} />
-        <div className="absolute inset-0 box-border" style={glow1} />
-        <div className="absolute inset-0 box-border" style={glow2} />
+        <canvas ref={canvasRef} className="block" />
+      </div>
+      <div className={`pointer-events-none absolute inset-0 z-0 rounded-[inherit] ${hoverClass}`}>
         <div
-          className="absolute inset-0 box-border animate-[electric-flicker_2.6s_ease-in-out_infinite]"
-          style={glow3}
+          className="pointer-events-none absolute inset-0 rounded-[inherit]"
+          style={{ border: `${thickness}px solid ${hexToRgba(color, 0.6)}`, filter: "blur(1px)" }}
         />
         <div
-          className="absolute inset-0 animate-[electric-flicker_3.4s_ease-in-out_infinite]"
-          style={bgGlow}
+          className="pointer-events-none absolute inset-0 rounded-[inherit]"
+          style={{ border: `${thickness + 2}px solid ${color}`, filter: "blur(4px)" }}
+        />
+        <div
+          className="pointer-events-none absolute inset-0 -z-[1] scale-110 rounded-[inherit] opacity-30"
+          style={{
+            filter: "blur(32px)",
+            background: `linear-gradient(-30deg, ${color}, transparent, ${color})`,
+          }}
         />
       </div>
-
-      <div className="relative" style={inheritRadius}>
-        {children}
-      </div>
+      <div className="relative z-[1] h-full rounded-[inherit]">{children}</div>
     </div>
   );
-}
+};
+
+export default ElectricBorder;
+
+// Component inspired by @BalintFerenczy on X
+// https://codepen.io/BalintFerenczy/pen/KwdoyEN

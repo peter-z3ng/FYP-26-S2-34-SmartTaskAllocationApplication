@@ -43,23 +43,6 @@ select:-webkit-autofill {
   transition: background-color 9999s ease-in-out 0s;
 }
 
-/* Subtle flame flicker for the ElectricBorder bloom layers. */
-@keyframes electric-flicker {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  25% {
-    opacity: 0.82;
-  }
-  50% {
-    opacity: 0.95;
-  }
-  70% {
-    opacity: 0.78;
-  }
-}
-
 .material-symbols-outlined {
   font-family: "Material Symbols Outlined" !important;
   font-weight: normal;
