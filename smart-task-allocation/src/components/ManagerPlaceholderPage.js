@@ -2,8 +2,8 @@
 
 export default function ManagerPlaceholderPage({ eyebrow, title, description }) {
   return (
-    <section className="h-full min-h-0 overflow-hidden rounded-2xl border border-[#BBE1FA] bg-white shadow-sm">
-      <div className="h-full overflow-y-auto px-8 py-8">
+    <section className="h-full min-h-0 overflow-hidden">
+      <div className="h-full overflow-y-auto">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#5d7290]">
           {eyebrow}
         </p>

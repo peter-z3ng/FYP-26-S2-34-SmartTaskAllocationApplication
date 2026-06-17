@@ -1,7 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { getSupabaseBrowserClient } from "@/lib/supabaseClient";
+
+// Starter tasks Optima Red seeds into the new workspace.
+const STARTER_TASKS = [
+  "Project setup",
+  "Requirements gathering",
+  "Design",
+  "Implementation",
+  "Testing & review",
+];
 
 const STEPS = [
   { label: "Investigating organization structure", icon: "org" },
@@ -203,24 +213,149 @@ export default function AgentDeployModal({ agent, roster = [], onClose }) {
   const [teamSize, setTeamSize] = useState("");
   const [duration, setDuration] = useState("");
   const [currentStep, setCurrentStep] = useState(0);
+  const [error, setError] = useState("");
+  const [summary, setSummary] = useState(null);
+  const startedRef = useRef(false);
 
   // Optimus Blue (Orchestrator) assembles the other agents instead of running
   // the linear team-build pipeline.
   const isBlue = agent.id === "blue";
+  const isRed = agent.id === "red";
   const otherAgents = isBlue ? roster.filter((a) => a.id !== agent.id) : [];
 
   const lastIndex = isBlue ? otherAgents.length + 1 : STEPS.length - 1;
   const isFinished = phase === "running" && currentStep >= lastIndex;
 
+  // Simulated pipeline (Blue / fallback). Red runs the real workflow below.
   useEffect(() => {
-    if (phase !== "running" || currentStep >= lastIndex) return;
+    if (phase !== "running" || isRed || currentStep >= lastIndex) return;
     const timer = setTimeout(() => setCurrentStep((step) => step + 1), STEP_MS);
     return () => clearTimeout(timer);
-  }, [phase, currentStep, lastIndex]);
+  }, [phase, currentStep, lastIndex, isRed]);
+
+  // Real team-build workflow for Optima Red — runs once when deploying starts.
+  useEffect(() => {
+    if (phase === "running" && isRed && !startedRef.current) {
+      startedRef.current = true;
+      runWorkflow();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, isRed]);
+
+  async function authHeaders() {
+    const supabase = getSupabaseBrowserClient();
+    const { data } = await supabase.auth.getSession();
+    return {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${data.session?.access_token ?? ""}`,
+    };
+  }
+
+  async function runWorkflow() {
+    setError("");
+    try {
+      const headers = await authHeaders();
+      const size = Math.max(1, Number(teamSize) || 1);
+      const base = projectName.trim() || "New Project";
+
+      // 0 — Investigating organization structure
+      setCurrentStep(0);
+      const orgRes = await fetch("/api/manager-organization", { headers });
+      const orgData = await orgRes.json();
+      if (!orgRes.ok) throw new Error(orgData.error || "Could not read your organization.");
+
+      // 1 — Choosing suitable employees (active, excluding the manager)
+      setCurrentStep(1);
+      const chosen = (orgData.accounts ?? [])
+        .filter((a) => a.account_status === "Active" && a.user_id !== orgData.currentUserId)
+        .slice(0, size);
+
+      // 2 — Creating a team
+      setCurrentStep(2);
+      const teamRes = await fetch("/api/teams", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ teamName: `${base} Team` }),
+      });
+      const teamData = await teamRes.json();
+      if (!teamRes.ok) throw new Error(teamData.error || "Could not create the team.");
+      const teamId = teamData.team?.team_id;
+
+      // 3 — Inviting employees to the team
+      setCurrentStep(3);
+      for (const member of chosen) {
+        await fetch("/api/team-invitations", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ teamId, inviteeUserId: member.user_id }),
+        });
+      }
+
+      // 4 — Creating a workspace
+      setCurrentStep(4);
+      const wsRes = await fetch("/api/workspaces", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ workspaceName: base }),
+      });
+      const wsData = await wsRes.json();
+      if (!wsRes.ok) throw new Error(wsData.error || "Could not create the workspace.");
+      const workspaceId = wsData.workspace?.workspace_id;
+
+      // 5 — Adding required tasks
+      setCurrentStep(5);
+      for (const title of STARTER_TASKS) {
+        await fetch("/api/tasks", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ workspaceId, title }),
+        });
+      }
+
+      // 6 — Assigning tasks to suitable employees (round-robin)
+      setCurrentStep(6);
+      if (chosen.length) {
+        const tasksRes = await fetch(`/api/tasks?workspaceId=${workspaceId}`, { headers });
+        const tasksData = await tasksRes.json();
+        const tasks = tasksData.tasks ?? [];
+        for (let i = 0; i < tasks.length; i += 1) {
+          const task = tasks[i];
+          const assignee = chosen[i % chosen.length];
+          await fetch("/api/tasks", {
+            method: "PATCH",
+            headers,
+            body: JSON.stringify({
+              taskId: task.task_id,
+              title: task.title,
+              description: task.description ?? "",
+              status: task.status ?? "Open",
+              priority: task.priority ?? "Medium",
+              assignedTo: assignee.user_id,
+              startDatetime: task.start_datetime ?? "",
+              endDatetime: task.end_datetime ?? "",
+            }),
+          });
+        }
+      }
+
+      // 7 — Completion
+      setCurrentStep(7);
+      setSummary({
+        team: `${base} Team`,
+        members: chosen.length,
+        workspace: base,
+        tasks: STARTER_TASKS.length,
+      });
+    } catch (runError) {
+      setError(runError.message);
+    }
+  }
 
   function handleStart(event) {
     event.preventDefault();
     setCurrentStep(0);
+    setError("");
+    setSummary(null);
     setPhase("running");
   }
 
@@ -430,13 +565,27 @@ export default function AgentDeployModal({ agent, roster = [], onClose }) {
               )}
             </div>
 
+            {error ? (
+              <p className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                {error}
+              </p>
+            ) : null}
+
+            {summary ? (
+              <p className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+                Deployed <strong>{summary.team}</strong> with {summary.members} member
+                {summary.members === 1 ? "" : "s"}, workspace <strong>{summary.workspace}</strong>, and{" "}
+                {summary.tasks} tasks assigned.
+              </p>
+            ) : null}
+
             <button
               type="button"
               onClick={onClose}
-              disabled={!isFinished}
+              disabled={!isFinished && !error}
               className="mt-6 h-12 w-full rounded-full bg-[#0D1E4C] text-sm font-black uppercase tracking-[0.2em] text-white transition hover:bg-[#0a1838] disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {isFinished ? "Preview" : "Deploying..."}
+              {error ? "Close" : isFinished ? "Done" : "Deploying..."}
             </button>
           </div>
         )}

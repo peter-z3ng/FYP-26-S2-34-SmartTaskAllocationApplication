@@ -359,6 +359,7 @@ export default function TopInformationBar({ actor }) {
   }
 
   return (
+    <>
     <div className="relative z-100 flex min-h-14 w-full items-center gap-4 bg-white/20 backdrop-blur-md px-2 py-1 sm:px-6 lg:px-6">
 
         <Image
@@ -469,9 +470,10 @@ export default function TopInformationBar({ actor }) {
           ) : null}
         </div>
       </div>
+    </div>
 
       {isSearchOpen ? (
-        <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center px-4 py-10">
+        <div className="pointer-events-none fixed inset-0 z-[200] flex items-center justify-center px-4 py-10">
           <div className="pointer-events-auto mx-auto w-full max-w-4xl overflow-hidden rounded-2xl border border-white/60 bg-white/20 text-[#07183b] shadow-[0_28px_90px_rgba(7,24,59,0.28)] backdrop-blur-md">
             <div className="flex items-center gap-4 border-b border-white/60 px-6 py-5">
               <span className="text-[#61708a]">
@@ -541,7 +543,7 @@ export default function TopInformationBar({ actor }) {
           </div>
         </div>
       ) : null}
-    </div>
+    </>
   );
 }
 
