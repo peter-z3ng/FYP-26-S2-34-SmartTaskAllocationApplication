@@ -7,6 +7,7 @@ import { Inter } from "next/font/google";
 import LaserFlow from "@/components/LaserFlow";
 import OrganizationLogoLoop from "@/components/OrganizationLogoLoop";
 import FeatureShowcase from "@/components/FeatureShowcase";
+import TestimonialsSection from "@/components/TestimonialsSection";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -39,15 +40,25 @@ export default function Home() {
               aria-label="Landing page navigation"
               className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-full border border-white/20 bg-white/5 px-8 py-3 text-sm font-semibold text-white/80 shadow-[0_18px_60px_rgba(0,0,0,0.24)] backdrop-blur-md lg:flex"
             >
-              {["Products", "Resources", "Community", "Pricing"].map((item) => (
-                <a
-                  key={item}
-                  href={`#${item.toLowerCase()}`}
-                  className="rounded-full px-4 py-2 transition hover:bg-white/10 hover:text-white"
-                >
-                  {item}
-                </a>
-              ))}
+              {["Products", "Resources", "Community", "Pricing"].map((item) =>
+                item === "Pricing" ? (
+                  <Link
+                    key={item}
+                    href="/pricing"
+                    className="rounded-full px-4 py-2 transition hover:bg-white/10 hover:text-white"
+                  >
+                    {item}
+                  </Link>
+                ) : (
+                  <a
+                    key={item}
+                    href={`#${item.toLowerCase()}`}
+                    className="rounded-full px-4 py-2 transition hover:bg-white/10 hover:text-white"
+                  >
+                    {item}
+                  </a>
+                )
+              )}
             </nav>
 
             <div className="flex shrink-0 items-center gap-4">
@@ -111,9 +122,7 @@ export default function Home() {
 
       <FeatureShowcase />
 
-      <section className="relative h-[400px] w-full bg-[#FFFFFF]">
-        <h1 className="absolute top-1/2 left-1/2 -translate-x-1/2 text-3xl text-black">&lt; Testimonials Section &gt;</h1>
-      </section>
+      <TestimonialsSection />
 
       <section className="relative h-[400px] w-full bg-[#FFFFFF]">
         <h1 className="absolute top-1/2 left-1/2 -translate-x-1/2 text-3xl text-black">&lt; User Statistics Section &gt;</h1>
