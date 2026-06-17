@@ -57,6 +57,45 @@ export default function WorkspaceManagement() {
   const [groupColorById, setGroupColorById] = useState({});
   const [targetGroupId, setTargetGroupId] = useState(null);
   const [columns, setColumns] = useState(defaultColumns);
+  const [isOptimusOpen, setIsOptimusOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [autoAssignView, setAutoAssignView] = useState("closed");
+
+  // Optimus AI auto-assign: scan → results (workspace-level, shown once).
+  useEffect(() => {
+    if (autoAssignView !== "scanning") return undefined;
+    const timer = window.setTimeout(() => setAutoAssignView("results"), 5000);
+    return () => window.clearTimeout(timer);
+  }, [autoAssignView]);
+
+  // Open the Optimus assistant when triggered from the top search bar.
+  useEffect(() => {
+    function handleSearchAction(event) {
+      const detail = event.detail ?? {};
+      if (detail.actor !== "manager" || detail.actionId !== "open-optimus-ai") return;
+      window.sessionStorage.removeItem("optima:pending-search-action");
+      setIsOptimusOpen(true);
+    }
+    window.addEventListener("optima:search-action", handleSearchAction);
+    const pending = window.sessionStorage.getItem("optima:pending-search-action");
+    if (pending) {
+      try {
+        const detail = JSON.parse(pending);
+        if (detail.actor === "manager" && detail.actionId === "open-optimus-ai") {
+          window.sessionStorage.removeItem("optima:pending-search-action");
+          window.setTimeout(() => setIsOptimusOpen(true), 0);
+        }
+      } catch {
+        window.sessionStorage.removeItem("optima:pending-search-action");
+      }
+    }
+    return () => window.removeEventListener("optima:search-action", handleSearchAction);
+  }, []);
+
+  function startAutoAssignScan() {
+    setIsOptimusOpen(false);
+    setAutoAssignView("scanning");
+  }
 
   const currentWorkspace = useMemo(
     () => workspaces.find((workspace) => workspace.workspace_id === selectedWorkspaceId),
@@ -667,13 +706,13 @@ export default function WorkspaceManagement() {
 
   return (
     <div
-      className={`grid h-full min-h-0 overflow-hidden rounded-2xl border border-[#BBE1FA] bg-white shadow-sm transition-[grid-template-columns] ${
+      className={`grid h-full min-h-0 overflow-hidden rounded-2xl transition-[grid-template-columns] ${
         isWorkspaceSidebarCollapsed
           ? "lg:grid-cols-[40px_minmax(0,1fr)]"
           : "lg:grid-cols-[300px_minmax(0,1fr)]"
       }`}
     >
-      <aside className="relative overflow-visible bg-[#BBE1FA] px-3 py-4 shadow-md shadow-[#2563EB]">
+      <aside className="relative overflow-visible border-r border-white/40 px-3 py-4">
         <button
           type="button"
           onClick={() => setIsWorkspaceSidebarCollapsed((current) => !current)}
@@ -798,17 +837,71 @@ export default function WorkspaceManagement() {
         )}
       </aside>
 
-      <section className="flex min-h-0 min-w-0 flex-col bg-white">
-        <div className="shrink-0 border-b border-[#d6deed] px-6 py-5">
-          <button
-            type="button"
-            onClick={openWorkspaceDetails}
-            disabled={!currentWorkspace}
-            className="inline-flex items-center gap-2 rounded-md text-left text-3xl font-bold text-[#2f3442] transition hover:bg-[#e8f3ff] disabled:cursor-default disabled:hover:bg-transparent"
-          >
-            {currentWorkspace?.workspace_name ?? "Start with a template"}
-            {currentWorkspace ? <span className="text-xl text-[#667085]">⌄</span> : null}
-          </button>
+      <section className="flex min-h-0 min-w-0 flex-col pl-6">
+        <div className="shrink-0 border-b border-[#d6deed] pr-6 py-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={openWorkspaceDetails}
+              disabled={!currentWorkspace}
+              className="inline-flex items-center gap-2 rounded-md text-left text-3xl font-bold text-[#2f3442] transition hover:bg-[#e8f3ff] disabled:cursor-default disabled:hover:bg-transparent"
+            >
+              {currentWorkspace?.workspace_name ?? "Start with a template"}
+              {currentWorkspace ? <span className="text-xl text-[#667085]">⌄</span> : null}
+            </button>
+
+            {currentWorkspace ? (
+              <div className="flex shrink-0 items-center gap-2">
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsOptimusOpen((current) => !current)}
+                    className="h-10 rounded-lg border border-[#c4ccdc] bg-white px-4 text-sm font-bold text-[#07183b] shadow-sm transition hover:bg-[#eef6ff]"
+                  >
+                    Optimus AI
+                  </button>
+                  {isOptimusOpen ? (
+                    <OptimusAssistantMenu
+                      onAutoAssign={startAutoAssignScan}
+                      onClose={() => setIsOptimusOpen(false)}
+                    />
+                  ) : null}
+                </div>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsShareOpen((current) => !current)}
+                    className="h-10 rounded-lg border border-[#c4ccdc] bg-white px-4 text-sm font-bold text-[#07183b] shadow-sm transition hover:bg-[#eef6ff]"
+                  >
+                    Share
+                  </button>
+                  {isShareOpen ? (
+                    <WorkspaceShareMenu
+                      workspace={currentWorkspace}
+                      onAccessChange={(linkAccess) =>
+                        updateWorkspace(currentWorkspace.workspace_id, { linkAccess })
+                      }
+                    />
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => startNewTask(groups[0]?.group_id)}
+                  className="h-10 rounded-lg bg-[#0a72e8] px-4 text-sm font-bold text-white shadow-sm transition hover:bg-[#075fc2]"
+                >
+                  Add Task
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          {autoAssignView === "scanning" ? <AutoAssignScanModal /> : null}
+          {autoAssignView === "results" ? (
+            <EligibleEmployeesDrawer
+              employees={employees}
+              onClose={() => setAutoAssignView("closed")}
+            />
+          ) : null}
 
           {error ? (
             <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
@@ -817,7 +910,7 @@ export default function WorkspaceManagement() {
           ) : null}
         </div>
 
-        <div className="min-h-0 flex-1 overflow-auto px-6 py-6">
+        <div className="min-h-0 flex-1 overflow-auto py-6 pr-6">
           {currentWorkspace ? (
             <>
             {groups.map((group, index) => {
@@ -870,7 +963,7 @@ export default function WorkspaceManagement() {
             <button
               type="button"
               onClick={addGroup}
-              className="mt-2 inline-flex items-center gap-2 rounded-lg border border-dashed border-[#c4ccdc] bg-white px-4 py-2 text-sm font-bold text-[#0a72e8] transition hover:bg-[#eef6ff]"
+              className="sticky left-0 mt-2 inline-flex w-max items-center gap-2 rounded-lg border border-dashed border-[#c4ccdc] bg-transparent px-4 py-2 text-sm font-bold text-[#0a72e8] transition hover:bg-white/30"
             >
               <span className="text-lg leading-none">+</span> Add group
             </button>
@@ -1307,62 +1400,10 @@ function TaskGroup({
   const [dragReadyTaskId, setDragReadyTaskId] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
   const [isGroupSettingsOpen, setIsGroupSettingsOpen] = useState(false);
-  const [isOptimusOpen, setIsOptimusOpen] = useState(false);
-  const [isShareOpen, setIsShareOpen] = useState(false);
-  const [autoAssignView, setAutoAssignView] = useState("closed");
   const [selectedTaskIds, setSelectedTaskIds] = useState(new Set());
   const gridTemplateColumns = `32px 44px ${columns
     .map((column) => (column === "Task" ? "360px" : "190px"))
     .join(" ")}`;
-
-  useEffect(() => {
-    if (autoAssignView !== "scanning") {
-      return undefined;
-    }
-
-    const timer = window.setTimeout(() => {
-      setAutoAssignView("results");
-    }, 5000);
-
-    return () => window.clearTimeout(timer);
-  }, [autoAssignView]);
-
-  useEffect(() => {
-    function handleSearchAction(event) {
-      const detail = event.detail ?? {};
-
-      if (detail.actor !== "manager" || detail.actionId !== "open-optimus-ai") {
-        return;
-      }
-
-      window.sessionStorage.removeItem("optima:pending-search-action");
-      setIsOptimusOpen(true);
-    }
-
-    window.addEventListener("optima:search-action", handleSearchAction);
-
-    const pending = window.sessionStorage.getItem("optima:pending-search-action");
-
-    if (pending) {
-      try {
-        const detail = JSON.parse(pending);
-
-        if (detail.actor === "manager" && detail.actionId === "open-optimus-ai") {
-          window.sessionStorage.removeItem("optima:pending-search-action");
-          window.setTimeout(() => setIsOptimusOpen(true), 0);
-        }
-      } catch {
-        window.sessionStorage.removeItem("optima:pending-search-action");
-      }
-    }
-
-    return () => window.removeEventListener("optima:search-action", handleSearchAction);
-  }, []);
-
-  function startAutoAssignScan() {
-    setIsOptimusOpen(false);
-    setAutoAssignView("scanning");
-  }
 
   function toggleTaskSelection(taskId) {
     setSelectedTaskIds((current) => {
@@ -1396,70 +1437,17 @@ function TaskGroup({
       }}
       onDrop={handleGroupDrop}
     >
-      <div className="mb-3 flex min-w-full items-center justify-between gap-4">
+      <div className="mb-3 flex min-w-full items-center gap-4">
         <button
           type="button"
           onClick={() => setIsGroupSettingsOpen((current) => !current)}
-          className="sticky left-0 z-30 flex items-center gap-3 rounded-md bg-white/95 pr-4 text-2xl font-bold transition hover:bg-[#eef6ff]"
+          className="sticky left-0 z-30 flex items-center gap-3 rounded-md pr-4 text-2xl font-bold transition hover:bg-white/30"
           style={{ color }}
         >
           <span className="text-xl">⌄</span>
           {title}
         </button>
-        <div className="sticky right-0 z-30 flex shrink-0 items-center gap-2 bg-white/95 pl-4">
-          <div className="relative">
-          <button
-            type="button"
-            onClick={() => setIsOptimusOpen((current) => !current)}
-            className="h-10 rounded-lg border border-[#c4ccdc] bg-white px-4 text-sm font-bold text-[#07183b] shadow-sm transition hover:bg-[#eef6ff]"
-          >
-            Optimus AI
-          </button>
-          {isOptimusOpen ? (
-            <OptimusAssistantMenu
-              onAutoAssign={startAutoAssignScan}
-              onClose={() => setIsOptimusOpen(false)}
-            />
-          ) : null}
-          </div>
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setIsShareOpen((current) => !current)}
-              className="h-10 rounded-lg border border-[#c4ccdc] bg-white px-4 text-sm font-bold text-[#07183b] shadow-sm transition hover:bg-[#eef6ff]"
-            >
-              Share
-            </button>
-            {isShareOpen ? (
-              <WorkspaceShareMenu
-                workspace={currentWorkspace}
-                onAccessChange={async (linkAccess) => {
-                  const updatedWorkspace = await onShareAccessChange(linkAccess);
-
-                  if (updatedWorkspace?.link_access === "Private") {
-                    return;
-                  }
-                }}
-              />
-            ) : null}
-          </div>
-          <button
-            type="button"
-            onClick={onAddTask}
-            className="h-10 rounded-lg bg-[#0a72e8] px-4 text-sm font-bold text-white shadow-sm transition hover:bg-[#075fc2]"
-          >
-            Add Task
-          </button>
-        </div>
       </div>
-
-      {autoAssignView === "scanning" ? <AutoAssignScanModal /> : null}
-      {autoAssignView === "results" ? (
-        <EligibleEmployeesDrawer
-          employees={employees}
-          onClose={() => setAutoAssignView("closed")}
-        />
-      ) : null}
 
       {isGroupSettingsOpen ? (
         <GroupSettingsPopover
@@ -1480,18 +1468,17 @@ function TaskGroup({
         />
       ) : null}
 
-      <div className="overflow-visible bg-white">
+      <div className="overflow-visible">
         <div
           className="sticky top-0 z-10 grid border-b border-[#d6deed] text-sm font-bold text-[#2f3442]"
           style={{ gridTemplateColumns }}
         >
-          <div className="sticky left-0 z-40 bg-[#fbfcff] p-2" />
-          <div className="sticky left-[32px] z-40 bg-[#fbfcff] p-3" />
+          <div className="sticky left-0 z-40 bg-white p-2" style={{ gridColumn: "span 2" }} />
           {columns.map((column) => (
             <div
               key={column}
-              className={`bg-[#fbfcff] p-3 ${
-                column === "Task" ? "sticky left-[76px] z-40" : ""
+              className={`p-3 ${
+                column === "Task" ? "sticky left-[76px] z-40 bg-white" : "bg-white/30 backdrop-blur-sm"
               }`}
             >
               {column}
@@ -1563,8 +1550,8 @@ function TaskGroup({
             className="grid border-b border-[#d6deed] text-sm text-[#667085]"
             style={{ gridTemplateColumns }}
           >
-          <div className="sticky left-0 z-20 bg-inherit" />
-          <div className="sticky left-[32px] z-20 bg-inherit p-3" />
+          <div className="sticky left-0 z-20 bg-white" />
+          <div className="sticky left-[32px] z-20 bg-white p-3" />
           <div className="p-3" style={{ gridColumn: `span ${columns.length}` }}>
               {emptyText}
             </div>
@@ -1587,10 +1574,10 @@ function TaskGroup({
           className="grid border-b border-[#d6deed] text-sm text-[#667085]"
           style={{ gridTemplateColumns }}
         >
-          <div className="sticky left-0 z-20 flex items-center justify-center bg-inherit p-2">
+          <div className="sticky left-0 z-20 flex items-center justify-center bg-white p-2">
             <span className="text-base font-bold leading-none text-[#CBD5E1]">⋮⋮</span>
           </div>
-          <div className="sticky left-[32px] z-20 flex items-center justify-center bg-inherit p-3">
+          <div className="sticky left-[32px] z-20 flex items-center justify-center bg-white p-3">
             <input
               type="checkbox"
               className="h-5 w-5 rounded border-[#d6deed] text-[#07183b]"
@@ -1600,8 +1587,7 @@ function TaskGroup({
           <button
             type="button"
             onClick={onAddTask}
-            className="p-3 text-left hover:bg-[#f8faff] focus:bg-[#e8f3ff] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#07183b]"
-            style={{ gridColumn: `span ${columns.length}` }}
+            className="sticky left-[76px] z-20 bg-white p-3 text-left hover:bg-[#f8faff] focus:bg-[#e8f3ff] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#07183b]"
           >
             + Add task
           </button>
@@ -2168,7 +2154,7 @@ function TaskRow({
       onDragLeave={onRowDragLeave}
       className={`relative grid border-b border-[#d6deed] text-sm text-[#2f3442] transition ${
         isDragging ? "opacity-50" : "opacity-100"
-      } ${isSelected ? "bg-[#BBE1FA]/80" : "bg-white"}`}
+      } ${isSelected ? "bg-[#BBE1FA]/80" : "bg-transparent hover:bg-white/20"}`}
       style={{ gridTemplateColumns }}
     >
       {dropPosition ? (
@@ -2179,7 +2165,7 @@ function TaskRow({
         />
       ) : null}
       <div
-        className="sticky left-0 z-20 flex cursor-grab items-center justify-center bg-inherit p-2 text-[#98A2B3] active:cursor-grabbing"
+        className="sticky left-0 z-20 flex cursor-grab items-center justify-center bg-white p-2 text-[#98A2B3] active:cursor-grabbing"
         onMouseDown={onPrepareDrag}
         onMouseUp={onReleaseDrag}
         onTouchStart={onPrepareDrag}
@@ -2189,7 +2175,7 @@ function TaskRow({
           ⋮⋮
         </span>
       </div>
-      <div className="sticky left-[32px] z-20 flex items-center justify-center bg-inherit p-3">
+      <div className="sticky left-[32px] z-20 flex items-center justify-center bg-white p-3">
         <input
           type="checkbox"
           checked={isSelected}
@@ -2226,7 +2212,7 @@ function TaskCell({
   if (column === "Task") {
     return (
       <EditableTextCell
-        className={isSticky ? "sticky left-[76px] z-20 bg-inherit" : ""}
+        className={isSticky ? "sticky left-[76px] z-20 bg-white" : ""}
         value={task.title ?? ""}
         description={task.description}
         onSave={(value) => onTaskUpdate(task, { title: value })}
@@ -2251,8 +2237,9 @@ function TaskCell({
     );
   }
 
+  const ownerEmployee = employees.find((member) => member.user_id === task.owner_id);
   const values = {
-    Owner: task.owner_id ? "Owner" : "-",
+    Owner: ownerEmployee ? getDisplayName(ownerEmployee) : "—",
     "Last updated": formatDate(task.updated_at),
   };
 
@@ -2499,10 +2486,10 @@ function EditableTextCell({ className = "", value, description, onSave }) {
         setDraft(value);
         setIsEditing(true);
       }}
-      className={`${className} min-h-14 p-3 text-left transition hover:bg-[#f8faff]`}
+      className={`${className} block min-h-14 w-full overflow-hidden p-3 text-left transition hover:bg-[#f8faff]`}
       title="Edit task"
     >
-      <p className="font-semibold">{value}</p>
+      <p className="truncate font-semibold">{value}</p>
       {description ? (
         <p className="mt-1 line-clamp-1 text-xs text-[#667085]">{description}</p>
       ) : null}

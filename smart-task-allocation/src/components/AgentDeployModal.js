@@ -4,14 +4,16 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabaseClient";
 
-// Starter tasks Optima Red seeds into the new workspace.
-const STARTER_TASKS = [
-  "Project setup",
-  "Requirements gathering",
-  "Design",
-  "Implementation",
-  "Testing & review",
+const METHODOLOGIES = [
+  { value: "general", label: "General purpose (any team)" },
+  { value: "scrum", label: "Scrum (weekly sprints)" },
+  { value: "kanban", label: "Kanban (board columns)" },
+  { value: "waterfall", label: "Waterfall (phases)" },
 ];
+
+function isEmployeeRole(roleName) {
+  return (roleName || "").trim().toLowerCase() === "employee";
+}
 
 const STEPS = [
   { label: "Investigating organization structure", icon: "org" },
@@ -212,6 +214,7 @@ export default function AgentDeployModal({ agent, roster = [], onClose }) {
   const [projectName, setProjectName] = useState("");
   const [teamSize, setTeamSize] = useState("");
   const [duration, setDuration] = useState("");
+  const [methodology, setMethodology] = useState("general");
   const [currentStep, setCurrentStep] = useState(0);
   const [error, setError] = useState("");
   const [summary, setSummary] = useState(null);
@@ -264,10 +267,15 @@ export default function AgentDeployModal({ agent, roster = [], onClose }) {
       const orgData = await orgRes.json();
       if (!orgRes.ok) throw new Error(orgData.error || "Could not read your organization.");
 
-      // 1 — Choosing suitable employees (active, excluding the manager)
+      // 1 — Choosing suitable employees (Active + Employee role only)
       setCurrentStep(1);
       const chosen = (orgData.accounts ?? [])
-        .filter((a) => a.account_status === "Active" && a.user_id !== orgData.currentUserId)
+        .filter(
+          (a) =>
+            a.account_status === "Active" &&
+            a.user_id !== orgData.currentUserId &&
+            isEmployeeRole(a.role?.role_name),
+        )
         .slice(0, size);
 
       // 2 — Creating a team
@@ -302,17 +310,37 @@ export default function AgentDeployModal({ agent, roster = [], onClose }) {
       if (!wsRes.ok) throw new Error(wsData.error || "Could not create the workspace.");
       const workspaceId = wsData.workspace?.workspace_id;
 
-      // 5 — Adding required tasks
+      // 5 — Adding required tasks (AI-generated plan → groups + tasks)
       setCurrentStep(5);
-      for (const title of STARTER_TASKS) {
-        await fetch("/api/tasks", {
+      const planRes = await fetch("/api/agent/generate-plan", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ projectName: base, duration, methodology }),
+      });
+      const planData = await planRes.json();
+      const groups = planData.groups ?? [];
+      let taskCount = 0;
+      for (const group of groups) {
+        const groupRes = await fetch("/api/task-groups", {
           method: "POST",
           headers,
-          body: JSON.stringify({ workspaceId, title }),
+          body: JSON.stringify({ workspaceId, groupName: group.name }),
         });
+        const groupData = await groupRes.json();
+        const groupId = groupData.group?.group_id ?? null;
+        for (const task of group.tasks ?? []) {
+          const title = typeof task === "string" ? task : task.title;
+          if (!title) continue;
+          await fetch("/api/tasks", {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ workspaceId, groupId, title }),
+          });
+          taskCount += 1;
+        }
       }
 
-      // 6 — Assigning tasks to suitable employees (round-robin)
+      // 6 — Assigning tasks to suitable employees (round-robin, keeps group)
       setCurrentStep(6);
       if (chosen.length) {
         const tasksRes = await fetch(`/api/tasks?workspaceId=${workspaceId}`, { headers });
@@ -344,7 +372,7 @@ export default function AgentDeployModal({ agent, roster = [], onClose }) {
         team: `${base} Team`,
         members: chosen.length,
         workspace: base,
-        tasks: STARTER_TASKS.length,
+        tasks: taskCount,
       });
     } catch (runError) {
       setError(runError.message);
@@ -459,6 +487,24 @@ export default function AgentDeployModal({ agent, roster = [], onClose }) {
                   className={inputClass}
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="methodology" className="block text-sm font-bold text-[#0D1E4C]">
+                Methodology <span className="font-medium text-slate-400">(optional)</span>
+              </label>
+              <select
+                id="methodology"
+                value={methodology}
+                onChange={(event) => setMethodology(event.target.value)}
+                className={inputClass}
+              >
+                {METHODOLOGIES.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <button

@@ -368,13 +368,13 @@ export default function TeamManagement() {
 
   return (
     <section
-      className={`grid h-full min-h-0 overflow-hidden rounded-2xl border border-[#BBE1FA] bg-white shadow-sm transition-[grid-template-columns] ${
+      className={`grid h-full min-h-0 overflow-hidden rounded-2xl transition-[grid-template-columns] ${
         isTeamSidebarCollapsed
           ? "lg:grid-cols-[40px_minmax(0,1fr)]"
           : "lg:grid-cols-[300px_minmax(0,1fr)]"
       }`}
     >
-      <aside className="relative overflow-visible bg-[#BBE1FA] px-3 py-4 shadow-md shadow-[#2563EB]">
+      <aside className="relative overflow-visible border-r border-white/40 px-3 py-4">
         <button
           type="button"
           onClick={() => setIsTeamSidebarCollapsed((current) => !current)}
@@ -449,7 +449,7 @@ export default function TeamManagement() {
         )}
       </aside>
 
-      <div className="min-h-0 overflow-y-auto bg-white px-8 py-3">
+      <div className="min-h-0 overflow-y-auto px-8 py-3">
         <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between">
           <div>
             <h2 className="mt-2 text-2xl font-black text-[#07183b]">

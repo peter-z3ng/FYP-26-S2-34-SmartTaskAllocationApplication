@@ -79,13 +79,13 @@ export default function EmployeeWorkspaceView() {
 
   return (
     <section
-      className={`grid h-full min-h-0 overflow-hidden rounded-2xl border border-[#BBE1FA] bg-white shadow-sm transition-[grid-template-columns] ${
+      className={`grid h-full min-h-0 overflow-hidden rounded-2xl transition-[grid-template-columns] ${
         isSidebarCollapsed
           ? "lg:grid-cols-[40px_minmax(0,1fr)]"
           : "lg:grid-cols-[300px_minmax(0,1fr)]"
       }`}
     >
-      <aside className="relative overflow-visible bg-[#BBE1FA] px-3 py-4 shadow-md shadow-[#2563EB]">
+      <aside className="relative overflow-visible border-r border-white/40 px-3 py-4">
         <button
           type="button"
           onClick={() => setIsSidebarCollapsed((current) => !current)}
@@ -144,7 +144,7 @@ export default function EmployeeWorkspaceView() {
         )}
       </aside>
 
-      <div className="min-h-0 overflow-auto bg-white">
+      <div className="min-h-0 overflow-auto">
         <div className="border-b border-[#d6deed] px-8 py-5">
           <h1 className="text-3xl font-black text-[#2f3442]">
             {selectedWorkspace?.workspace_name ?? "Workspace"}

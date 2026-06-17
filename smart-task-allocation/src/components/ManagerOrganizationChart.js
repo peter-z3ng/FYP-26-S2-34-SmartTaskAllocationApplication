@@ -163,8 +163,8 @@ export default function ManagerOrganizationChart() {
   }
 
   return (
-    <div className="h-full min-h-0 overflow-hidden rounded-2xl border border-[#BBE1FA] bg-white shadow-sm">
-      <section className="flex h-full min-h-0 flex-col bg-white">
+    <div className="h-full min-h-0 overflow-hidden rounded-2xl">
+      <section className="flex h-full min-h-0 flex-col">
         {error ? (
           <p className="mx-6 mt-5 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
             {error}
@@ -183,7 +183,7 @@ export default function ManagerOrganizationChart() {
               Loading organization...
             </div>
           ) : organization ? (
-            <div className="min-h-full rounded-[32px] bg-[#fffafa] px-8 py-8">
+            <div className="min-h-full rounded-[32px] px-8 py-8">
               <div className="text-center">
                 <h1 className="text-4xl font-semibold text-black">
                   {organization.organization_name}
@@ -247,7 +247,7 @@ export default function ManagerOrganizationChart() {
               )}
             </div>
           ) : (
-            <div className="flex h-full min-h-[520px] items-center justify-center rounded-[32px] bg-[#fffafa] text-center">
+            <div className="flex h-full min-h-[520px] items-center justify-center rounded-[32px] text-center">
               <div>
                 <h1 className="text-4xl font-medium text-black">Organization</h1>
                 <p className="mt-3 text-sm text-[#667085]">
