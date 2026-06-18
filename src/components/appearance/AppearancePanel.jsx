@@ -47,37 +47,38 @@ export default function AppearancePanel({ onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-[#07183b]/40 p-4"
+      className="optima-appearance-overlay fixed inset-0 z-[60] flex items-center justify-center bg-[#07183b]/40 p-4"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-lg rounded-[28px] border border-white/60 bg-white/70 p-7 shadow-[0_30px_80px_rgba(13,30,76,0.25)] backdrop-blur-2xl"
+        className="optima-appearance-panel relative w-full max-w-lg rounded-[28px] border border-white/60 bg-white/70 p-7 shadow-[0_30px_80px_rgba(13,30,76,0.25)] backdrop-blur-2xl"
         onClick={(event) => event.stopPropagation()}
       >
         <button
           type="button"
           onClick={onClose}
           aria-label="Close appearance settings"
-          className="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-full bg-white text-lg font-bold text-[#07183b] shadow"
+          className="optima-icon-button absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-full bg-white text-lg font-bold text-[#07183b] shadow"
         >
           ×
         </button>
 
-        <h2 className="text-2xl font-black text-[#07183b]">Appearance</h2>
-        <p className="mt-1 text-sm text-[#52627a]">
+        <h2 className="optima-panel-title text-2xl font-black text-[#07183b]">Appearance</h2>
+        <p className="optima-panel-copy mt-1 text-sm text-[#52627a]">
           Personalize your background and theme. Saved on this device.
         </p>
 
         {/* Theme */}
         <section className="mt-6">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-[#57708f]">Theme</h3>
-          <div className="mt-3 inline-flex rounded-full border border-[#C7DDEB] bg-white/70 p-1">
+          <h3 className="optima-field-label text-sm font-bold uppercase tracking-wider text-[#57708f]">Theme</h3>
+          <div className="optima-segment mt-3 inline-flex rounded-full border border-[#C7DDEB] bg-white/70 p-1">
             {["light", "dark"].map((option) => (
               <button
                 key={option}
                 type="button"
                 onClick={() => setTheme(option)}
-                className={`rounded-full px-6 py-2 text-sm font-bold capitalize transition-colors ${
+                aria-pressed={theme === option}
+                className={`optima-segment-button rounded-full px-6 py-2 text-sm font-bold capitalize transition-colors ${
                   theme === option ? "bg-[#0D1E4C] text-white" : "text-[#0A2540] hover:bg-white"
                 }`}
               >
@@ -85,17 +86,12 @@ export default function AppearancePanel({ onClose }) {
               </button>
             ))}
           </div>
-          {theme === "dark" ? (
-            <p className="mt-2 text-xs font-medium text-[#94739c]">
-              Dark mode styling is coming soon — the preference is saved.
-            </p>
-          ) : null}
         </section>
 
         {/* Background type */}
         <section className="mt-6">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-[#57708f]">Background</h3>
-          <div className="mt-3 inline-flex rounded-full border border-[#C7DDEB] bg-white/70 p-1">
+          <h3 className="optima-field-label text-sm font-bold uppercase tracking-wider text-[#57708f]">Background</h3>
+          <div className="optima-segment mt-3 inline-flex rounded-full border border-[#C7DDEB] bg-white/70 p-1">
             {[
               { value: "solid", label: "Solid color" },
               { value: "wallpaper", label: "Wallpaper" },
@@ -104,7 +100,8 @@ export default function AppearancePanel({ onClose }) {
                 key={option.value}
                 type="button"
                 onClick={() => setBackgroundType(option.value)}
-                className={`rounded-full px-6 py-2 text-sm font-bold transition-colors ${
+                aria-pressed={background.type === option.value}
+                className={`optima-segment-button rounded-full px-6 py-2 text-sm font-bold transition-colors ${
                   background.type === option.value
                     ? "bg-[#0D1E4C] text-white"
                     : "text-[#0A2540] hover:bg-white"
@@ -141,7 +138,7 @@ export default function AppearancePanel({ onClose }) {
                 type="color"
                 value={background.color}
                 onChange={(event) => setBackgroundColor(event.target.value)}
-                className="h-10 w-16 cursor-pointer rounded-lg border border-[#C7DDEB] bg-white p-1"
+                className="optima-color-input h-10 w-16 cursor-pointer rounded-lg border border-[#C7DDEB] bg-white p-1"
               />
               <span className="font-mono text-xs text-[#52627a]">{background.color}</span>
             </label>

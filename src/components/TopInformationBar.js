@@ -377,7 +377,7 @@ export default function TopInformationBar({ actor }) {
   }
 
   return (
-    <div className="relative z-100 flex min-h-14 w-full items-center gap-4 bg-white/20 backdrop-blur-md px-2 py-1 sm:px-6 lg:px-6">
+    <div className="optima-topbar relative z-100 flex min-h-14 w-full items-center gap-4 bg-white/20 backdrop-blur-md px-2 py-1 sm:px-6 lg:px-6">
 
         <Image
           src="/optimalogowhite.png"
@@ -404,7 +404,7 @@ export default function TopInformationBar({ actor }) {
             setIsNotificationsOpen(false);
             setIsProfileOpen(false);
           }}
-          className="absolute inset-0 h-full w-full rounded-full border border-transparent bg-[#e8ebf1] pl-10 pr-4 text-left text-sm font-medium text-[#61708a] outline-none transition hover:bg-white/80 focus:border-[#b8c4d8] focus:bg-white"
+          className="optima-search-trigger absolute inset-0 h-full w-full rounded-full border border-transparent bg-[#e8ebf1] pl-10 pr-4 text-left text-sm font-medium text-[#61708a] outline-none transition hover:bg-white/80 focus:border-[#b8c4d8] focus:bg-white"
           aria-label="Open global search"
         >
           Search...
@@ -430,7 +430,7 @@ export default function TopInformationBar({ actor }) {
         </button>
 
         {isNotificationsOpen ? (
-          <div className="absolute right-0 top-12 w-80 rounded-xl border border-white/60 bg-white/20 p-3 shadow-[0_18px_60px_rgba(7,24,59,0.16)] backdrop-blur-sm">
+          <div className="optima-popover absolute right-0 top-12 w-80 rounded-xl border border-white/60 bg-white/20 p-3 shadow-[0_18px_60px_rgba(7,24,59,0.16)] backdrop-blur-sm">
             <div className="flex items-center justify-between px-1">
               <p className="font-bold text-[#07183b]">Notifications</p>
               <span className="rounded-full bg-[#eef6ff] px-2 py-1 text-xs font-bold text-[#0a2a66]">
@@ -463,7 +463,7 @@ export default function TopInformationBar({ actor }) {
           </button>
 
           {isProfileOpen ? (
-            <div className="absolute right-0 top-14 w-72 rounded-xl border border-white/60 bg-white/20 p-3 shadow-[0_18px_60px_rgba(7,24,59,0.16)] backdrop-blur-lg">
+            <div className="optima-popover absolute right-0 top-14 w-72 rounded-xl border border-white/60 bg-white/20 p-3 shadow-[0_18px_60px_rgba(7,24,59,0.16)] backdrop-blur-lg">
               <div className="rounded-lg bg-[#f8faff] p-3">
                 <p className="text-sm font-bold text-[#07183b]">{profile.name}</p>
                 <p className="mt-1 truncate text-xs text-[#61708a]">{profile.email}</p>
@@ -490,7 +490,7 @@ export default function TopInformationBar({ actor }) {
 
       {isSearchOpen ? (
         <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center px-4 py-10">
-          <div className="pointer-events-auto mx-auto w-full max-w-4xl overflow-hidden rounded-2xl border border-white/60 bg-white/20 text-[#07183b] shadow-[0_28px_90px_rgba(7,24,59,0.28)] backdrop-blur-md">
+          <div className="optima-search-modal pointer-events-auto mx-auto w-full max-w-4xl overflow-hidden rounded-2xl border border-white/60 bg-white/20 text-[#07183b] shadow-[0_28px_90px_rgba(7,24,59,0.28)] backdrop-blur-md">
             <div className="flex items-center gap-4 border-b border-white/60 px-6 py-5">
               <span className="text-[#61708a]">
                 <SearchIcon />

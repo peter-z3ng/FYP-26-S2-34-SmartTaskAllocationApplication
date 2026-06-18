@@ -3,12 +3,14 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 const STORAGE_KEY = "optima-appearance";
+const LIGHT_BACKGROUND = "#C7DDEB";
+const DARK_BACKGROUND = "#0F172A";
 
 export const DEFAULT_APPEARANCE = {
-  theme: "light", // "light" | "dark" — dark styling implemented later
+  theme: "light",
   background: {
     type: "solid", // "solid" | "wallpaper"
-    color: "#C7DDEB",
+    color: LIGHT_BACKGROUND,
     wallpaper: "", // image URL or data URL
   },
 };
@@ -72,7 +74,20 @@ export function AppearanceProvider({ children }) {
       appearance,
       hydrated,
       backgroundStyle,
-      setTheme: (theme) => setAppearance((p) => ({ ...p, theme })),
+      setTheme: (theme) =>
+        setAppearance((p) => {
+          const next = { ...p, theme };
+          const isSolid = p.background.type === "solid";
+          const currentColor = p.background.color?.toLowerCase();
+
+          if (theme === "dark" && isSolid && currentColor === LIGHT_BACKGROUND.toLowerCase()) {
+            next.background = { ...p.background, color: DARK_BACKGROUND };
+          } else if (theme === "light" && isSolid && currentColor === DARK_BACKGROUND.toLowerCase()) {
+            next.background = { ...p.background, color: LIGHT_BACKGROUND };
+          }
+
+          return next;
+        }),
       setBackgroundColor: (color) =>
         setAppearance((p) => ({ ...p, background: { ...p.background, type: "solid", color } })),
       setWallpaper: (wallpaper) =>
