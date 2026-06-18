@@ -8,6 +8,7 @@ import LanyardShowcase from "@/components/LanyardShowcase";
 import OrganizationLogoLoop from "@/components/OrganizationLogoLoop";
 import FeatureShowcase from "@/components/FeatureShowcase";
 import TestimonialsSection from "@/components/TestimonialsSection";
+import LandingFooter from "@/components/LandingFooter";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -73,17 +74,11 @@ export default function Home() {
 
       <TestimonialsSection />
 
-      <section className="relative h-[400px] w-full bg-[#FFFFFF]">
-        <h1 className="absolute top-1/2 left-1/2 -translate-x-1/2 text-3xl text-black">&lt; User Statistics Section &gt;</h1>
-      </section>
-
       <OrganizationLogoLoop />
 
       <LanyardShowcase />
 
-      <section className="relative h-[400px] w-full bg-[#00000]">
-        <h1 className="absolute top-1/2 left-1/2 -translate-x-1/2 text-3xl text-white">&lt; Footer &gt;</h1>
-      </section>
+      <LandingFooter />
 
     </main>
   );
