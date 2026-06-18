@@ -167,6 +167,7 @@ export async function GET(request) {
       availabilities: availabilitiesByUserId.get(employee.user_id) ?? [],
       skills: skillsByUserId.get(employee.user_id) ?? [],
       skill_details: skillDetailsByUserId.get(employee.user_id) ?? [],
+      worked_hours_this_week: Math.round((workedHoursByUserId.get(employee.user_id) ?? 0) / 60),
     }));
 
     return NextResponse.json({

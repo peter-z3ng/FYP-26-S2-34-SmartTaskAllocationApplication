@@ -20,7 +20,7 @@ export default function Home() {
       <section className="relative min-h-[140vh] overflow-hidden">
         <LandingNav />
 
-        <div className="pointer-events-none absolute left-[50%] -top-20 z-[10] h-[145.5vh] min-h-[360px] w-screen -translate-x-1/2 overflow-hidden">
+        <div className="pointer-events-none absolute left-[50%] -top-20 z-[5] h-[145.5vh] min-h-[360px] w-screen -translate-x-1/2 overflow-hidden">
           <LaserFlow
             horizontalBeamOffset={0.1}
             verticalBeamOffset={0}
@@ -58,8 +58,15 @@ export default function Home() {
 
         <section
           aria-label="Dashboard preview"
-          className="absolute left-1/2 top-[70vh] z-[6] h-[52vh] min-h-[360px] w-[65%] -translate-x-1/2 overflow-hidden rounded-[20px] border-2 border-[#2563EB] bg-[#120F17] shadow-[0_0_90px_rgba(37,99,235,0.9)]"
-        />
+          className="absolute left-1/2 top-[70vh] z-[6] aspect-[1512/940] w-[65%] -translate-x-1/2 overflow-hidden rounded-[20px] border-2 border-[#2563EB] bg-[#120F17] shadow-[0_0_90px_rgba(37,99,235,0.9)]"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/preview/dashboardpreview.png"
+            alt="Optima dashboard preview"
+            className="h-full w-full object-contain"
+          />
+        </section>
       </section>
 
       <FeatureShowcase />

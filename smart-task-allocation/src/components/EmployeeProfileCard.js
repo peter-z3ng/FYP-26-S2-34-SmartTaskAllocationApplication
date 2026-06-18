@@ -63,9 +63,10 @@ export default function EmployeeProfileCard({ employee, defaultExpanded = false 
     ? employee.skill_details
     : (employee?.skills ?? []).map((name) => ({ name, level: 1 }));
 
-  // Highlight weekdays the employee has an availability window on, and sum
-  // hours from any availability rows that fall in the current week.
-  const { availableDays, hoursThisWeek } = useMemo(() => {
+  const hoursWorked = employee?.worked_hours_this_week ?? 0;
+
+  // Highlight weekdays the employee has an availability window on.
+  const availableDays = useMemo(() => {
     const rows = employee?.availabilities?.length
       ? employee.availabilities
       : employee?.availability
@@ -73,28 +74,14 @@ export default function EmployeeProfileCard({ employee, defaultExpanded = false 
         : [];
 
     const days = new Set();
-    let minutes = 0;
-
-    const now = new Date();
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - toMondayIndex(now.getDay()));
-    weekStart.setHours(0, 0, 0, 0);
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 7);
-
     for (const row of rows) {
       if (!row?.availability_start) continue;
       const start = new Date(row.availability_start);
       if (Number.isNaN(start.getTime())) continue;
       days.add(toMondayIndex(start.getDay()));
-
-      const end = row.availability_end ? new Date(row.availability_end) : null;
-      if (end && !Number.isNaN(end.getTime()) && start >= weekStart && start < weekEnd) {
-        minutes += Math.max(0, (end.getTime() - start.getTime()) / 60000);
-      }
     }
 
-    return { availableDays: days, hoursThisWeek: Math.round(minutes / 60) };
+    return days;
   }, [employee]);
 
   return (
@@ -195,7 +182,7 @@ export default function EmployeeProfileCard({ employee, defaultExpanded = false 
           </div>
 
           <p className="mt-4 text-center text-xs font-semibold text-[#52627a]">
-            {hoursThisWeek} hours available this week
+            {hoursWorked} hours worked this week
           </p>
         </div>
       ) : null}

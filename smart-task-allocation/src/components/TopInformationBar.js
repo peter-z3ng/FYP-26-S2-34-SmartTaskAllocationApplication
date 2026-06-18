@@ -6,6 +6,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabaseClient";
 import { sideMenuNavigation } from "@/lib/sideMenuNavigation";
+import {
+  DEMO_ROLES,
+  clearDemoSession,
+  demoAuthHeaders,
+  isDemoSession,
+} from "@/lib/demoClient";
 
 const roleActions = {
   manager: [
@@ -135,6 +141,12 @@ export default function TopInformationBar({ actor }) {
   const [isLoadingSearchItems, setIsLoadingSearchItems] = useState(false);
   const [profile, setProfile] = useState({ email: "", name: "" });
   const [now, setNow] = useState(() => new Date());
+  const [isDemo, setIsDemo] = useState(false);
+  const [isSwitchingRole, setIsSwitchingRole] = useState(false);
+
+  useEffect(() => {
+    setIsDemo(isDemoSession());
+  }, []);
 
   const baseSearchItems = useMemo(() => {
     const navigationItems =
@@ -314,6 +326,42 @@ export default function TopInformationBar({ actor }) {
     router.refresh();
   }
 
+  async function switchDemoRole(roleKey) {
+    if (isSwitchingRole) return;
+    setIsSwitchingRole(true);
+    try {
+      const response = await fetch("/api/demo/role", {
+        method: "POST",
+        headers: await demoAuthHeaders(),
+        body: JSON.stringify({ role: roleKey }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Could not switch role.");
+      }
+      setIsProfileOpen(false);
+      router.push(result.home);
+      router.refresh();
+    } catch {
+      /* swallow — demo only */
+    } finally {
+      setIsSwitchingRole(false);
+    }
+  }
+
+  async function exitDemo() {
+    const supabase = getSupabaseBrowserClient();
+    try {
+      await fetch("/api/demo/end", { method: "POST", headers: await demoAuthHeaders() });
+    } catch {
+      /* best-effort teardown */
+    }
+    clearDemoSession();
+    await supabase.auth.signOut();
+    router.push("/");
+    router.refresh();
+  }
+
   function profileHref() {
     if (actor === "manager") {
       return "/manager/my-space";
@@ -450,20 +498,57 @@ export default function TopInformationBar({ actor }) {
               <div className="rounded-lg bg-[#f8faff] p-3">
                 <p className="text-sm font-bold text-[#07183b]">{profile.name}</p>
                 <p className="mt-1 truncate text-xs text-[#61708a]">{profile.email}</p>
+                {isDemo ? (
+                  <span className="mt-2 inline-flex rounded-full bg-[#eef6ff] px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-[#0a2a66]">
+                    Demo mode
+                  </span>
+                ) : null}
               </div>
+
+              {isDemo ? (
+                <div className="mt-3 rounded-lg border border-white/60 bg-white/40 p-2">
+                  <p className="px-2 pb-1 text-[11px] font-bold uppercase tracking-wide text-[#61708a]">
+                    Try a role
+                  </p>
+                  <div className="grid gap-1">
+                    {DEMO_ROLES.map((role) => {
+                      const isCurrent = role.home.startsWith(`/${actor}`);
+                      return (
+                        <button
+                          key={role.key}
+                          type="button"
+                          disabled={isSwitchingRole}
+                          onClick={() => switchDemoRole(role.key)}
+                          className={`flex items-center justify-between rounded-md px-3 py-2 text-left text-sm font-bold transition disabled:opacity-60 ${
+                            isCurrent
+                              ? "bg-[#0a2a66] text-white"
+                              : "text-[#07183b] hover:bg-[#eef6ff]"
+                          }`}
+                        >
+                          {role.label}
+                          {isCurrent ? <span className="text-xs">Current</span> : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
               <div className="mt-3 grid gap-2">
-                <Link
-                  href={profileHref()}
-                  className="rounded-md px-3 py-2 text-sm font-bold text-[#07183b] hover:bg-[#eef6ff]"
-                >
-                  View profile
-                </Link>
+                {isDemo ? null : (
+                  <Link
+                    href={profileHref()}
+                    className="rounded-md px-3 py-2 text-sm font-bold text-[#07183b] hover:bg-[#eef6ff]"
+                  >
+                    View profile
+                  </Link>
+                )}
                 <button
                   type="button"
-                  onClick={signOut}
+                  onClick={isDemo ? exitDemo : signOut}
                   className="rounded-md px-3 py-2 text-left text-sm font-bold text-red-700 hover:bg-red-50"
                 >
-                  Log out
+                  {isDemo ? "Exit demo" : "Log out"}
                 </button>
               </div>
             </div>
