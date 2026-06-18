@@ -118,9 +118,44 @@ export async function GET(request) {
       return NextResponse.json({ error: tasksError.message }, { status: 400 });
     }
 
+    // Groups for the selected workspace (read-only column structure).
+    const { data: groups } = await supabase
+      .from("task_group")
+      .select("group_id, group_name, workspace_id, sort_order")
+      .eq("workspace_id", selectedWorkspaceId)
+      .order("sort_order", { ascending: true })
+      .order("group_id", { ascending: true });
+
+    // Member display names so Owner / Assigned to can render full names.
+    const memberIds = [
+      ...new Set(
+        (tasks ?? [])
+          .flatMap((task) => [task.owner_id, task.assigned_to])
+          .filter(Boolean),
+      ),
+    ];
+
+    let members = [];
+    if (memberIds.length) {
+      const [{ data: profiles }, { data: accounts }] = await Promise.all([
+        supabase.from("profile").select("user_id, full_name").in("user_id", memberIds),
+        supabase.from("user_account").select("user_id, username, email").in("user_id", memberIds),
+      ]);
+      const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p.full_name]));
+      const accountMap = new Map((accounts ?? []).map((a) => [a.user_id, a]));
+      members = memberIds.map((id) => ({
+        user_id: id,
+        full_name: profileMap.get(id) ?? null,
+        username: accountMap.get(id)?.username ?? null,
+        email: accountMap.get(id)?.email ?? null,
+      }));
+    }
+
     return NextResponse.json({
       workspaces,
       tasks: tasks ?? [],
+      groups: groups ?? [],
+      members,
       selectedWorkspaceId,
     });
   } catch (error) {

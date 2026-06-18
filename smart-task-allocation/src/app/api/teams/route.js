@@ -331,3 +331,86 @@ export async function POST(request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+export async function PATCH(request) {
+  try {
+    const supabase = getSupabaseAdminClient();
+    const { user, error: authError } = await requireManager(request, supabase);
+    if (authError) {
+      return NextResponse.json({ error: authError }, { status: 403 });
+    }
+
+    const { account, error: accountError } = await getAccount(supabase, user);
+    if (accountError) {
+      return NextResponse.json({ error: accountError.message }, { status: 400 });
+    }
+
+    const { teamId, teamName } = await request.json();
+    const numericTeamId = Number(teamId);
+    const cleanedTeamName = cleanString(teamName);
+
+    if (!numericTeamId || !cleanedTeamName) {
+      return NextResponse.json({ error: "Team ID and name are required." }, { status: 400 });
+    }
+
+    const { error } = await supabase
+      .from("team")
+      .update({ team_name: cleanedTeamName, updated_at: new Date().toISOString() })
+      .eq("team_id", numericTeamId)
+      .eq("created_by", account?.user_id);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request) {
+  try {
+    const supabase = getSupabaseAdminClient();
+    const { user, error: authError } = await requireManager(request, supabase);
+    if (authError) {
+      return NextResponse.json({ error: authError }, { status: 403 });
+    }
+
+    const { account, error: accountError } = await getAccount(supabase, user);
+    if (accountError) {
+      return NextResponse.json({ error: accountError.message }, { status: 400 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const numericTeamId = Number(searchParams.get("teamId"));
+    if (!numericTeamId) {
+      return NextResponse.json({ error: "Team ID is required." }, { status: 400 });
+    }
+
+    // Only the team's creator may delete it.
+    const { data: ownedTeam } = await supabase
+      .from("team")
+      .select("team_id")
+      .eq("team_id", numericTeamId)
+      .eq("created_by", account?.user_id)
+      .maybeSingle();
+
+    if (!ownedTeam) {
+      return NextResponse.json({ error: "Team not found or you do not own it." }, { status: 404 });
+    }
+
+    // Remove dependents first (FKs to team don't cascade).
+    await supabase.from("team_invitation").delete().eq("team_id", numericTeamId);
+    await supabase.from("team_member").delete().eq("team_id", numericTeamId);
+
+    const { error } = await supabase.from("team").delete().eq("team_id", numericTeamId);
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

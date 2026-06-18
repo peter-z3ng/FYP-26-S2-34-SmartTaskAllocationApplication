@@ -49,6 +49,8 @@ export default function WorkspaceManagement() {
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [workspaceName, setWorkspaceName] = useState("");
   const [openWorkspaceMenuId, setOpenWorkspaceMenuId] = useState("");
+  const [editingWorkspaceId, setEditingWorkspaceId] = useState("");
+  const [editingWorkspaceName, setEditingWorkspaceName] = useState("");
   const [favoriteWorkspaceIds, setFavoriteWorkspaceIds] = useState(new Set());
   const [isWorkspaceSidebarCollapsed, setIsWorkspaceSidebarCollapsed] = useState(false);
   const [isWorkspaceDetailsOpen, setIsWorkspaceDetailsOpen] = useState(false);
@@ -406,18 +408,90 @@ export default function WorkspaceManagement() {
     }
   }
 
-  async function renameWorkspaceFromMenu(workspace) {
-    const nextName = window.prompt("Rename workspace", workspace.workspace_name);
+  function startRenameWorkspace(workspace) {
+    setEditingWorkspaceId(workspace.workspace_id);
+    setEditingWorkspaceName(workspace.workspace_name);
+  }
 
-    if (!nextName?.trim()) {
+  function cancelRenameWorkspace() {
+    setEditingWorkspaceId("");
+    setEditingWorkspaceName("");
+  }
+
+  async function commitRenameWorkspace(workspace) {
+    const nextName = editingWorkspaceName.trim();
+    if (!nextName || nextName === workspace.workspace_name) {
+      cancelRenameWorkspace();
       return;
     }
-
+    cancelRenameWorkspace();
     await updateWorkspace(workspace.workspace_id, { workspaceName: nextName });
   }
 
+  // Duplicate a workspace with all of its groups and tasks.
   async function duplicateWorkspace(workspace) {
-    await createWorkspaceWithName(`${workspace.workspace_name} copy`);
+    setError("");
+    try {
+      const headers = { "Content-Type": "application/json", ...(await authHeaders()) };
+
+      const wsResponse = await fetch("/api/workspaces", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ workspaceName: `${workspace.workspace_name} copy` }),
+      });
+      const wsResult = await wsResponse.json();
+      if (!wsResponse.ok) {
+        throw new Error(wsResult.error || "Could not duplicate workspace.");
+      }
+      const newWorkspaceId = wsResult.workspace?.workspace_id;
+
+      const [groupsResponse, tasksResponse] = await Promise.all([
+        fetch(`/api/task-groups?workspaceId=${workspace.workspace_id}`, { headers }),
+        fetch(`/api/tasks?workspaceId=${workspace.workspace_id}`, { headers }),
+      ]);
+      const sourceGroups = (await groupsResponse.json()).groups ?? [];
+      const sourceTasks = (await tasksResponse.json()).tasks ?? [];
+
+      // Recreate each group, mapping old group_id → new group_id.
+      const groupIdMap = new Map();
+      for (const group of sourceGroups) {
+        const groupResponse = await fetch("/api/task-groups", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ workspaceId: newWorkspaceId, groupName: group.group_name }),
+        });
+        const groupResult = await groupResponse.json();
+        if (groupResult.group?.group_id != null) {
+          groupIdMap.set(group.group_id, groupResult.group.group_id);
+        }
+      }
+
+      // Recreate each task under its mapped group.
+      for (const task of sourceTasks) {
+        const newGroupId =
+          task.group_id != null ? groupIdMap.get(task.group_id) ?? null : null;
+        await fetch("/api/tasks", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            workspaceId: newWorkspaceId,
+            groupId: newGroupId,
+            title: task.title,
+            description: task.description ?? "",
+            assignedTo: task.assigned_to ?? "",
+            status: task.status ?? "Open",
+            priority: task.priority ?? "Medium",
+            startDatetime: task.start_datetime ?? "",
+            endDatetime: task.end_datetime ?? "",
+          }),
+        });
+      }
+
+      await loadWorkspaces();
+      setSelectedWorkspaceId(newWorkspaceId);
+    } catch (duplicateError) {
+      setError(duplicateError.message);
+    }
   }
 
   async function deleteWorkspace(workspace) {
@@ -759,24 +833,52 @@ export default function WorkspaceManagement() {
             const isActive = workspace.workspace_id === selectedWorkspaceId;
 
             return (
-              <div key={workspace.workspace_id} className="relative">
-                <button
-                  type="button"
-                  onClick={() => setSelectedWorkspaceId(workspace.workspace_id)}
-                  className={`flex h-12 w-full items-center gap-3 rounded-md px-3 pr-11 text-left text-sm font-medium transition ${
-                  isActive
-                    ? "bg-[#cfe7ff] text-[#233246]"
-                    : "text-[#667085] hover:bg-[#eef6ff] hover:text-[#233246]"
-                }`}
-                >
-                  <span className="flex h-7 w-7 items-center justify-center rounded-md text-xl text-[#475467]">
-                    ▣
-                  </span>
-                  <span className="min-w-0 truncate">
-                    {favoriteWorkspaceIds.has(workspace.workspace_id) ? "★ " : ""}
-                    {workspace.workspace_name}
-                  </span>
-                </button>
+              <div key={workspace.workspace_id} className="group relative">
+                {editingWorkspaceId === workspace.workspace_id ? (
+                  <div
+                    className={`flex h-12 w-full items-center gap-3 rounded-md px-3 ${
+                      isActive ? "bg-[#cfe7ff]" : ""
+                    }`}
+                  >
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xl text-[#475467]">
+                      ▣
+                    </span>
+                    <input
+                      value={editingWorkspaceName}
+                      autoFocus
+                      onChange={(event) => setEditingWorkspaceName(event.target.value)}
+                      onBlur={() => commitRenameWorkspace(workspace)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.currentTarget.blur();
+                        }
+                        if (event.key === "Escape") {
+                          cancelRenameWorkspace();
+                        }
+                      }}
+                      className="h-8 min-w-0 flex-1 rounded-md border border-[#0a72e8] bg-white px-2 text-sm font-semibold text-[#233246] outline-none"
+                    />
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedWorkspaceId(workspace.workspace_id)}
+                    className={`flex h-12 w-full items-center gap-3 rounded-md px-3 pr-11 text-left text-sm font-medium transition ${
+                    isActive
+                      ? "bg-[#cfe7ff] text-[#233246]"
+                      : "text-[#667085] hover:bg-[#eef6ff] hover:text-[#233246]"
+                  }`}
+                  >
+                    <span className="flex h-7 w-7 items-center justify-center rounded-md text-xl text-[#475467]">
+                      ▣
+                    </span>
+                    <span className="min-w-0 truncate">
+                      {favoriteWorkspaceIds.has(workspace.workspace_id) ? "★ " : ""}
+                      {workspace.workspace_name}
+                    </span>
+                  </button>
+                )}
+                {editingWorkspaceId === workspace.workspace_id ? null : (
                 <button
                   type="button"
                   onClick={(event) => {
@@ -785,11 +887,16 @@ export default function WorkspaceManagement() {
                       current === workspace.workspace_id ? "" : workspace.workspace_id
                     );
                   }}
-                  className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-md text-lg font-bold text-[#667085] hover:bg-white/60"
+                  className={`absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-md text-lg font-bold text-[#667085] transition hover:bg-white/60 ${
+                    openWorkspaceMenuId === workspace.workspace_id
+                      ? "opacity-100"
+                      : "opacity-0 group-hover:opacity-100"
+                  }`}
                   aria-label={`Open ${workspace.workspace_name} menu`}
                 >
-                  ...
+                  ⋯
                 </button>
+                )}
                 {openWorkspaceMenuId === workspace.workspace_id ? (
                   <WorkspaceRowMenu
                     isFavorite={favoriteWorkspaceIds.has(workspace.workspace_id)}
@@ -820,7 +927,7 @@ export default function WorkspaceManagement() {
                     }}
                     onRename={() => {
                       setOpenWorkspaceMenuId("");
-                      renameWorkspaceFromMenu(workspace);
+                      startRenameWorkspace(workspace);
                     }}
                   />
                 ) : null}

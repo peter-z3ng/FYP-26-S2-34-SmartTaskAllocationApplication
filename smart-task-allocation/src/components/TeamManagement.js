@@ -105,6 +105,74 @@ export default function TeamManagement() {
     [selectedTeamId, teams]
   );
 
+  const [openTeamMenuId, setOpenTeamMenuId] = useState("");
+  const [editingTeamId, setEditingTeamId] = useState("");
+  const [editingTeamName, setEditingTeamName] = useState("");
+
+  useEffect(() => {
+    function closeMenu() {
+      setOpenTeamMenuId("");
+    }
+    window.addEventListener("click", closeMenu);
+    return () => window.removeEventListener("click", closeMenu);
+  }, []);
+
+  function startRenameTeam(team) {
+    setEditingTeamId(team.team_id);
+    setEditingTeamName(team.team_name);
+  }
+
+  function cancelRenameTeam() {
+    setEditingTeamId("");
+    setEditingTeamName("");
+  }
+
+  async function commitRenameTeam(team) {
+    const nextName = editingTeamName.trim();
+    if (!nextName || nextName === team.team_name) {
+      cancelRenameTeam();
+      return;
+    }
+
+    setError("");
+    try {
+      const response = await fetch("/api/teams", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+        body: JSON.stringify({ teamId: team.team_id, teamName: nextName }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Could not rename team.");
+      }
+      cancelRenameTeam();
+      await loadTeams(team.team_id);
+    } catch (renameError) {
+      setError(renameError.message);
+    }
+  }
+
+  async function deleteTeam(team) {
+    if (!window.confirm(`Delete "${team.team_name}"? Members and invitations will be removed.`)) {
+      return;
+    }
+
+    setError("");
+    try {
+      const response = await fetch(`/api/teams?teamId=${team.team_id}`, {
+        method: "DELETE",
+        headers: await authHeaders(),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Could not delete team.");
+      }
+      await loadTeams();
+    } catch (deleteError) {
+      setError(deleteError.message);
+    }
+  }
+
   async function authHeaders() {
     const supabase = getSupabaseBrowserClient();
     const { data } = await supabase.auth.getSession();
@@ -421,21 +489,90 @@ export default function TeamManagement() {
               const isActive = String(team.team_id) === String(selectedTeamId);
 
               return (
-                <button
+                <div
                   key={team.team_id}
-                  type="button"
-                  onClick={() => loadTeams(team.team_id)}
-                  className={`flex h-12 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-medium transition ${
+                  className={`group relative flex h-12 w-full items-center gap-3 rounded-md pr-2 text-sm font-medium transition ${
                     isActive
                       ? "bg-[#cfe7ff] text-[#233246]"
                       : "text-[#667085] hover:bg-[#eef6ff] hover:text-[#233246]"
                   }`}
                 >
-                  <span className="flex h-7 w-7 items-center justify-center rounded-md text-xl text-[#475467]">
-                    ▣
-                  </span>
-                  <span className="min-w-0 truncate">{team.team_name}</span>
-                </button>
+                  {editingTeamId === team.team_id ? (
+                    <div className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xl text-[#475467]">
+                        ▣
+                      </span>
+                      <input
+                        value={editingTeamName}
+                        autoFocus
+                        onChange={(event) => setEditingTeamName(event.target.value)}
+                        onBlur={() => commitRenameTeam(team)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.currentTarget.blur();
+                          }
+                          if (event.key === "Escape") {
+                            cancelRenameTeam();
+                          }
+                        }}
+                        className="h-8 min-w-0 flex-1 rounded-md border border-[#0a72e8] bg-white px-2 text-sm font-semibold text-[#233246] outline-none"
+                      />
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => loadTeams(team.team_id)}
+                      className="flex min-w-0 flex-1 items-center gap-3 px-3 py-3 text-left"
+                    >
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xl text-[#475467]">
+                        ▣
+                      </span>
+                      <span className="min-w-0 truncate">{team.team_name}</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    aria-label={`Open ${team.team_name} menu`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setOpenTeamMenuId((current) =>
+                        current === team.team_id ? "" : team.team_id,
+                      );
+                    }}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-lg font-bold text-[#667085] opacity-0 transition hover:bg-white/60 group-hover:opacity-100"
+                  >
+                    ⋯
+                  </button>
+
+                  {openTeamMenuId === team.team_id ? (
+                    <div
+                      className="absolute right-2 top-12 z-30 w-40 overflow-hidden rounded-xl border border-white/60 bg-white/90 shadow-[0_18px_50px_rgba(7,24,59,0.18)] backdrop-blur-md"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenTeamMenuId("");
+                          startRenameTeam(team);
+                        }}
+                        className="block w-full px-4 py-2.5 text-left text-sm font-semibold text-[#233246] hover:bg-[#eef6ff]"
+                      >
+                        Rename
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenTeamMenuId("");
+                          deleteTeam(team);
+                        }}
+                        className="block w-full px-4 py-2.5 text-left text-sm font-semibold text-red-700 hover:bg-red-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               );
             })}
 

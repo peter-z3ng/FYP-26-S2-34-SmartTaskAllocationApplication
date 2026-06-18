@@ -58,15 +58,20 @@ export async function GET(request) {
 
     const employeeIds = data.map((employee) => employee.user_id);
 
-    // Merge full_name from the profile table so the UI can show real names.
+    // Merge full_name + job_title from the profile table so the UI can show
+    // real names and roles.
     let fullNameByUserId = new Map();
+    let jobTitleByUserId = new Map();
     if (employeeIds.length) {
       const { data: profiles } = await supabase
         .from("profile")
-        .select("user_id, full_name")
+        .select("user_id, full_name, job_title")
         .in("user_id", employeeIds);
       fullNameByUserId = new Map(
         (profiles ?? []).map((profile) => [profile.user_id, profile.full_name]),
+      );
+      jobTitleByUserId = new Map(
+        (profiles ?? []).map((profile) => [profile.user_id, profile.job_title]),
       );
     }
     const [{ data: skillRows, error: skillError }, { data: availabilityRows, error: availabilityError }] =
@@ -74,7 +79,7 @@ export async function GET(request) {
         ? await Promise.all([
             supabase
               .from("user_skill")
-              .select("user_id, skill:skill_id(skill_name)")
+              .select("user_id, proficiency_level, skill:skill_id(skill_name)")
               .in("user_id", employeeIds),
             supabase
               .from("availability")
@@ -95,31 +100,73 @@ export async function GET(request) {
       return NextResponse.json({ error: availabilityError.message }, { status: 400 });
     }
 
+    // Worked hours this week, summed from work_log clock in/out spans.
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7)); // Monday
+    weekStart.setHours(0, 0, 0, 0);
+
+    const workedHoursByUserId = new Map();
+    if (employeeIds.length) {
+      const { data: workLogs } = await supabase
+        .from("work_log")
+        .select("user_id, clock_in_at, clock_out_at")
+        .in("user_id", employeeIds)
+        .gte("clock_in_at", weekStart.toISOString());
+
+      for (const log of workLogs ?? []) {
+        const start = new Date(log.clock_in_at);
+        if (Number.isNaN(start.getTime())) continue;
+        // Open shifts count up to now; closed shifts up to clock-out.
+        const end = log.clock_out_at ? new Date(log.clock_out_at) : now;
+        if (Number.isNaN(end.getTime())) continue;
+        const minutes = Math.max(0, (end.getTime() - start.getTime()) / 60000);
+        workedHoursByUserId.set(
+          log.user_id,
+          (workedHoursByUserId.get(log.user_id) ?? 0) + minutes,
+        );
+      }
+    }
+
     const skillsByUserId = new Map();
+    const skillDetailsByUserId = new Map();
     const availabilityByUserId = new Map();
 
     for (const row of skillRows ?? []) {
-      const currentSkills = skillsByUserId.get(row.user_id) ?? [];
       const skillName = row.skill?.skill_name;
 
-      if (skillName) {
-        currentSkills.push(skillName);
+      if (!skillName) {
+        continue;
       }
 
+      const currentSkills = skillsByUserId.get(row.user_id) ?? [];
+      currentSkills.push(skillName);
       skillsByUserId.set(row.user_id, currentSkills);
+
+      const currentDetails = skillDetailsByUserId.get(row.user_id) ?? [];
+      currentDetails.push({ name: skillName, level: row.proficiency_level ?? 1 });
+      skillDetailsByUserId.set(row.user_id, currentDetails);
     }
+
+    const availabilitiesByUserId = new Map();
 
     for (const row of availabilityRows ?? []) {
       if (!availabilityByUserId.has(row.user_id)) {
         availabilityByUserId.set(row.user_id, row);
       }
+      const list = availabilitiesByUserId.get(row.user_id) ?? [];
+      list.push(row);
+      availabilitiesByUserId.set(row.user_id, list);
     }
 
     const userAccounts = (data ?? []).map((employee) => ({
       ...employee,
       full_name: fullNameByUserId.get(employee.user_id) ?? null,
+      job_title: jobTitleByUserId.get(employee.user_id) ?? null,
       availability: availabilityByUserId.get(employee.user_id) ?? null,
+      availabilities: availabilitiesByUserId.get(employee.user_id) ?? [],
       skills: skillsByUserId.get(employee.user_id) ?? [],
+      skill_details: skillDetailsByUserId.get(employee.user_id) ?? [],
     }));
 
     return NextResponse.json({

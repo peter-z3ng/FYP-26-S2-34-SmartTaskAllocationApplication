@@ -359,6 +359,7 @@ export default function AgentDeployModal({ agent, roster = [], onClose }) {
               status: task.status ?? "Open",
               priority: task.priority ?? "Medium",
               assignedTo: assignee.user_id,
+              assignedBy: "Optimus AI",
               startDatetime: task.start_datetime ?? "",
               endDatetime: task.end_datetime ?? "",
             }),

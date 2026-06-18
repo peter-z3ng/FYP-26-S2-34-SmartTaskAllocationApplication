@@ -39,6 +39,35 @@ async function getManagerOrganizationId(supabase, user) {
   return byEmail.data?.organization_id ?? null;
 }
 
+// Display name of the person performing the assignment (the manager).
+async function getActorName(supabase, user) {
+  const { data: profile } = await supabase
+    .from("profile")
+    .select("full_name")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (profile?.full_name) return profile.full_name;
+
+  const { data: account } = await supabase
+    .from("user_account")
+    .select("username, email")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  return account?.username || account?.email || "Manager";
+}
+
+// Record a task → employee assignment in the allocation history.
+async function recordAssignment(supabase, { taskId, userId, assignedBy }) {
+  if (!taskId || !userId) return;
+  await supabase.from("task_assignment").insert({
+    task_id: taskId,
+    user_id: userId,
+    assigned_by: assignedBy || "Manager",
+    assigned_at: new Date().toISOString(),
+    status: "Assigned",
+  });
+}
+
 export async function GET(request) {
   try {
     const supabase = getSupabaseAdminClient();
@@ -99,6 +128,7 @@ export async function POST(request) {
       title,
       description,
       assignedTo,
+      assignedBy,
       status,
       priority,
       startDatetime,
@@ -124,28 +154,41 @@ export async function POST(request) {
       ? Number(lastTask.sort_order) + 1
       : 0;
 
-    const { error } = await supabase.from("task").insert({
-      organization_id: organizationId,
-      workspace_id: workspaceId,
-      group_id: groupId ?? null,
-      title: cleanString(title),
-      description: cleanString(description) || null,
-      owner_id: user.id,
-      assigned_to: assignedTo || null,
-      status: cleanString(status) || "Open",
-      priority: cleanString(priority) || "Medium",
-      start_datetime: startDatetime || null,
-      end_datetime: endDatetime || null,
-      sort_order: nextSortOrder,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
+    const { data: createdTask, error } = await supabase
+      .from("task")
+      .insert({
+        organization_id: organizationId,
+        workspace_id: workspaceId,
+        group_id: groupId ?? null,
+        title: cleanString(title),
+        description: cleanString(description) || null,
+        owner_id: user.id,
+        assigned_to: assignedTo || null,
+        status: cleanString(status) || "Open",
+        priority: cleanString(priority) || "Medium",
+        start_datetime: startDatetime || null,
+        end_datetime: endDatetime || null,
+        sort_order: nextSortOrder,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .select("task_id")
+      .single();
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true });
+    if (assignedTo) {
+      const actor = assignedBy || (await getActorName(supabase, user));
+      await recordAssignment(supabase, {
+        taskId: createdTask.task_id,
+        userId: assignedTo,
+        assignedBy: actor,
+      });
+    }
+
+    return NextResponse.json({ success: true, task: createdTask });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -170,6 +213,7 @@ export async function PATCH(request) {
       title,
       description,
       assignedTo,
+      assignedBy,
       status,
       priority,
       startDatetime,
@@ -241,10 +285,22 @@ export async function PATCH(request) {
       taskUpdates.group_id = groupId;
     }
 
+    // Detect a real assignment change so we can log it in the allocation history.
+    const { data: existingTask } = await supabase
+      .from("task")
+      .select("assigned_to")
+      .eq("task_id", taskId)
+      .maybeSingle();
+
     const { error } = await supabase.from("task").update(taskUpdates).eq("task_id", taskId);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    if (assignedTo && assignedTo !== existingTask?.assigned_to) {
+      const actor = assignedBy || (await getActorName(supabase, user));
+      await recordAssignment(supabase, { taskId, userId: assignedTo, assignedBy: actor });
     }
 
     return NextResponse.json({ success: true });
