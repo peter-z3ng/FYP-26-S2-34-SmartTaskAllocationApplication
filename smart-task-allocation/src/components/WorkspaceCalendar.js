@@ -32,9 +32,46 @@ function isSameDay(a, b) {
   );
 }
 
+// A half-width overlay panel that grows out of its trigger button.
+// (Closed via the trigger pill, which becomes a × while open.)
+function OverlayPanel({ open, align, children }) {
+  const isRight = align === "right";
+  return (
+    <div
+      className={`absolute top-0 bottom-[30%] z-30 w-1/2 p-2 transition duration-200 ease-out ${
+        isRight ? "right-0 origin-top-right" : "left-0 origin-top-left"
+      } ${open ? "scale-100 opacity-100" : "pointer-events-none scale-90 opacity-0"}`}
+    >
+      <div className="flex h-full flex-col overflow-hidden rounded-3xl border border-white/60 bg-white/90 shadow-[0_24px_70px_rgba(13,30,76,0.22)] backdrop-blur-xl">
+        {/* Title divider — the floating pill sits over this bar */}
+        <div className="h-13 shrink-0 border-b border-[#E0E5E9]" />
+        <div className="min-h-0 flex-1 overflow-y-auto p-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      className="h-4 w-4"
+      aria-hidden="true"
+    >
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  );
+}
+
 export default function WorkspaceCalendar() {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
-  const [isTaskOpen, setIsTaskOpen] = useState(false);
+  // Independent — both panels can be open at the same time.
+  const [isTasksOpen, setIsTasksOpen] = useState(false);
+  const [isEmployeesOpen, setIsEmployeesOpen] = useState(false);
 
   const days = useMemo(
     () => Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)),
@@ -59,18 +96,19 @@ export default function WorkspaceCalendar() {
 
   return (
     <div className="relative flex h-full min-h-0 flex-col">
-      {/* Header: Task button · month nav · Employee button */}
-      <div className="relative flex shrink-0 items-center justify-between gap-4 px-2 pb-5">
+      {/* Header: Tasks · month nav · Employee */}
+      <div className="relative z-40 flex shrink-0 items-center justify-between gap-4 px-2 pb-5">
         <button
           type="button"
-          onClick={() => setIsTaskOpen((current) => !current)}
-          className={`rounded-full border z-40 px-6 py-3 text-sm font-bold transition ${
-            isTaskOpen
-              ? "border-white bg-slate-200 text-[#0D1E4C]"
-              : "border-white/60 bg-white/20 text-[#0D1E4C] hover:bg-white/70"
+          onClick={() => setIsTasksOpen((current) => !current)}
+          aria-label={isTasksOpen ? "Close tasks" : "Open tasks"}
+          className={`flex items-center justify-center rounded-full border text-sm font-bold transition ${
+            isTasksOpen
+              ? "h-11 w-11 border-white bg-slate-200 text-[#0D1E4C]"
+              : "border-white/60 bg-white/20 px-6 py-3 text-[#0D1E4C] hover:bg-white/70"
           }`}
         >
-          Tasks
+          {isTasksOpen ? <CloseIcon /> : "Tasks"}
         </button>
 
         <div className="flex items-center gap-3 text-lg font-bold text-[#0D1E4C]">
@@ -95,9 +133,15 @@ export default function WorkspaceCalendar() {
 
         <button
           type="button"
-          className="rounded-full border border-[#0D1E4C]/30 bg-white/40 px-6 py-3 text-sm font-bold text-[#0D1E4C] transition hover:bg-white/70"
+          onClick={() => setIsEmployeesOpen((current) => !current)}
+          aria-label={isEmployeesOpen ? "Close employees" : "Open employees"}
+          className={`flex items-center justify-center rounded-full border text-sm font-bold transition ${
+            isEmployeesOpen
+              ? "h-11 w-11 border-white bg-slate-200 text-[#0D1E4C]"
+              : "border-white/60 bg-white/20 px-6 py-3 text-[#0D1E4C] hover:bg-white/70"
+          }`}
         >
-          Employee
+          {isEmployeesOpen ? <CloseIcon /> : "Employee"}
         </button>
       </div>
 
@@ -114,10 +158,7 @@ export default function WorkspaceCalendar() {
             {days.map((day, index) => {
               const isToday = isSameDay(day, today);
               return (
-                <div
-                  key={day.toISOString()}
-                  className="py-2 text-center"
-                >
+                <div key={day.toISOString()} className="py-2 text-center">
                   <p className="text-[11px] font-semibold tracking-wide text-[#98a2b3]">
                     {DAY_LABELS[index]}
                   </p>
@@ -162,20 +203,17 @@ export default function WorkspaceCalendar() {
         </div>
       </div>
 
-      {/* Task overlay — grows from the Task button (which acts as the title).
-          Left half, top starts at the button, bottom 30% stays transparent. */}
-      <div
-        className={`absolute -left-2.5 -top-4 bottom-[30%] z-30 w-1/2 origin-top-left p-2 transition duration-200 ease-out ${
-          isTaskOpen ? "scale-100 opacity-100" : "pointer-events-none scale-90 opacity-0"
-        }`}
-      >
-        <div className="flex h-full flex-col overflow-hidden rounded-3xl border border-white/60 bg-white/80 shadow-[0_24px_70px_rgba(13,30,76,0.22)] backdrop-blur-xl">
-          {/* Title bar — the Task button floats over the left as the title */}
-          <div className="min-h-0 flex-1 overflow-y-auto p-5">
-            {/* Task list content goes here */}
-          </div>
-        </div>
-      </div>
+      {/* Tasks overlay — left half, grows from the Tasks button */}
+      <OverlayPanel open={isTasksOpen} align="left">
+        {/* Task list content goes here */}
+        <p className="px-1 py-2 text-sm text-[#52627a]">No tasks yet.</p>
+      </OverlayPanel>
+
+      {/* Employee overlay — right half, grows from the Employee button */}
+      <OverlayPanel open={isEmployeesOpen} align="right">
+        {/* Employee list content goes here */}
+        <p className="px-1 py-2 text-sm text-[#52627a]">No employees yet.</p>
+      </OverlayPanel>
     </div>
   );
 }
