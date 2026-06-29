@@ -1,12 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { sideMenuNavigation } from "@/lib/sideMenuNavigation";
 import TopInformationBar from "@/components/TopInformationBar";
 import { useAppearance } from "@/components/appearance/AppearanceContext";
-import AppearancePanel from "@/components/appearance/AppearancePanel";
 
 function NavIcon({ name }) {
   const commonProps = {
@@ -164,7 +162,6 @@ export default function SideMenuLayout({ actor, children }) {
   const pathname = usePathname();
   const navigation = sideMenuNavigation[actor];
   const { backgroundStyle } = useAppearance();
-  const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
 
   return (
     <main className="h-screen overflow-hidden text-[#07183b]" style={backgroundStyle}>
@@ -203,19 +200,23 @@ export default function SideMenuLayout({ actor, children }) {
                   );
                 })}
 
-                <button
-                  type="button"
-                  onClick={() => setIsAppearanceOpen(true)}
+                <Link
+                  href="/appearance"
                   title="Appearance"
                   aria-label="Appearance"
-                  className="flex h-12 w-full items-center gap-3 rounded-full px-3 text-[#0D1E4C] transition-colors hover:bg-white/40"
+                  aria-current={pathname === "/appearance" ? "page" : undefined}
+                  className={`flex h-12 w-full items-center gap-3 rounded-full px-3 transition-colors ${
+                    pathname === "/appearance"
+                      ? "bg-[#0D1E4C] text-white shadow-[0_10px_24px_rgba(10,42,102,0.22)]"
+                      : "text-[#0D1E4C] hover:bg-white/40"
+                  }`}
                 >
                   <NavIcon name="appearance" />
 
                   <span className="hidden whitespace-nowrap text-sm font-bold group-hover:block">
                     Appearance
                   </span>
-                </button>
+                </Link>
               </nav>
             </div>
           </aside>
@@ -225,8 +226,6 @@ export default function SideMenuLayout({ actor, children }) {
           {children}
         </div>
       </div>
-
-      {isAppearanceOpen ? <AppearancePanel onClose={() => setIsAppearanceOpen(false)} /> : null}
     </main>
   );
 }

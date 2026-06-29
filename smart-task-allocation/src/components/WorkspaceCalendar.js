@@ -44,7 +44,6 @@ function OverlayPanel({ open, align, children }) {
     >
       <div className="flex h-full flex-col overflow-hidden rounded-3xl border border-white/60 bg-white/90 shadow-[0_24px_70px_rgba(13,30,76,0.22)] backdrop-blur-xl">
         {/* Title divider — the floating pill sits over this bar */}
-        <div className="h-13 shrink-0 border-b border-[#E0E5E9]" />
         <div className="min-h-0 flex-1 overflow-y-auto p-5">{children}</div>
       </div>
     </div>
