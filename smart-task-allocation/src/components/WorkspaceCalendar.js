@@ -32,19 +32,22 @@ function isSameDay(a, b) {
   );
 }
 
-// A half-width overlay panel that grows out of its trigger button.
-// (Closed via the trigger pill, which becomes a × while open.)
+// A half-width overlay panel that grows out of its trigger button. Its outer
+// edge sits flush with the calendar's left/right border. Closed via the
+// trigger pill (which becomes a × while open).
 function OverlayPanel({ open, align, children }) {
   const isRight = align === "right";
   return (
     <div
-      className={`absolute top-0 bottom-[30%] z-30 w-1/2 p-2 transition duration-200 ease-out ${
-        isRight ? "right-0 origin-top-right" : "left-0 origin-top-left"
+      className={`absolute -top-2 bottom-[30%] z-30 w-1/2 pb-2 transition duration-200 ease-out ${
+        isRight ? "right-0 origin-top-right pl-2" : "left-0 origin-top-left pr-2"
       } ${open ? "scale-100 opacity-100" : "pointer-events-none scale-90 opacity-0"}`}
     >
+      {/* Same border as the calendar card; surface stays opaque (not glass) */}
       <div className="flex h-full flex-col overflow-hidden rounded-3xl border border-white/60 bg-white/90 shadow-[0_24px_70px_rgba(13,30,76,0.22)] backdrop-blur-xl">
-        {/* Title divider — the floating pill sits over this bar */}
-        <div className="min-h-0 flex-1 overflow-y-auto p-5">{children}</div>
+        {/* Spacer under the floating pill, which acts as the close button */}
+        <div className="h-13 shrink-0" />
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5">{children}</div>
       </div>
     </div>
   );
@@ -95,13 +98,13 @@ export default function WorkspaceCalendar() {
 
   return (
     <div className="relative flex h-full min-h-0 flex-col">
-      {/* Header: Tasks · month nav · Employee */}
-      <div className="relative z-40 flex shrink-0 items-center justify-between gap-4 px-2 pb-5">
+      {/* Header: Tasks · month nav · Employee (3-col grid keeps the nav centered) */}
+      <div className="relative z-40 grid shrink-0 grid-cols-3 items-center px-2 pb-5">
         <button
           type="button"
           onClick={() => setIsTasksOpen((current) => !current)}
           aria-label={isTasksOpen ? "Close tasks" : "Open tasks"}
-          className={`flex items-center justify-center rounded-full border text-sm font-bold transition ${
+          className={`flex items-center justify-center justify-self-start rounded-full border text-sm font-bold transition ${
             isTasksOpen
               ? "h-11 w-11 border-white bg-slate-200 text-[#0D1E4C]"
               : "border-white/60 bg-white/20 px-6 py-3 text-[#0D1E4C] hover:bg-white/70"
@@ -110,7 +113,7 @@ export default function WorkspaceCalendar() {
           {isTasksOpen ? <CloseIcon /> : "Tasks"}
         </button>
 
-        <div className="flex items-center gap-3 text-lg font-bold text-[#0D1E4C]">
+        <div className="flex items-center justify-self-center gap-3 text-lg font-bold text-[#0D1E4C]">
           <button
             type="button"
             onClick={goToPreviousWeek}
@@ -134,7 +137,7 @@ export default function WorkspaceCalendar() {
           type="button"
           onClick={() => setIsEmployeesOpen((current) => !current)}
           aria-label={isEmployeesOpen ? "Close employees" : "Open employees"}
-          className={`flex items-center justify-center rounded-full border text-sm font-bold transition ${
+          className={`flex items-center justify-center justify-self-end rounded-full border text-sm font-bold transition ${
             isEmployeesOpen
               ? "h-11 w-11 border-white bg-slate-200 text-[#0D1E4C]"
               : "border-white/60 bg-white/20 px-6 py-3 text-[#0D1E4C] hover:bg-white/70"
